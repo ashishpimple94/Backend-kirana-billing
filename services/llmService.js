@@ -108,7 +108,12 @@ function sanitizeItems(rawItems, priceMode = 'per_unit') {
     }
 
     const unit = canonicalizeUnit(item.unit);
-    const amount = Math.round(quantity * price * 100) / 100;
+    let amount = Math.round(quantity * price * 100) / 100;
+    if ((unit === 'g' || unit === 'gm') && quantity >= 50 && price > 20) {
+      amount = Math.round(((quantity * price) / 1000) * 100) / 100;
+    } else if (unit === 'ml' && quantity >= 50 && price > 30) {
+      amount = Math.round(((quantity * price) / 1000) * 100) / 100;
+    }
 
     valid.push({
       id: 'voice_' + Math.random().toString(36).substring(2, 9),
