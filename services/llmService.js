@@ -208,6 +208,83 @@ class GeminiProvider {
 
     throw lastError || new Error('Failed to parse audio with Gemini models');
   }
+
+  async parseTranscript({ transcript, language = 'mr-IN', priceMode = 'per_unit' }) {
+    if (!this.apiKey) {
+      throw new Error('GEMINI_API_KEY is not set in environment variables');
+    }
+
+    const prompt = `You extract ALL bill items from a voice transcript of an Indian shopkeeper (English, Hindi, Marathi or Hinglish). The transcript contains MANY items, usually 2 to 50, often with no punctuation between them.
+Speech recognition may write units as kilo, kilogram, K G, ltr, litre, L, and price words as rs, Rs, rupees, rupay, rupaye, ₹.
+Item order may vary: '1 kg sugar 60 rs' or 'sugar 1 kg 60 rs'.
+Return ONLY valid JSON:
+{"items":[{"name":string,"quantity":number,"unit":string,"price":number}]}
+Rules:
+- Return EVERY item mentioned. Never stop after the first item.
+- One object per item, in the order spoken.
+- price = rate per unit in rupees (PRICE_MODE: "${priceMode}").
+- Convert number words (ek, do, teen, one, two, half, aadha, dedh, pachas).
+- Normalize names (rawa, rava, sooji -> Rava; cheeni -> Sugar).
+- If quantity is missing, use 1. If price is missing, use 0.
+
+Preferred language hint: ${language}
+Transcript: "${transcript}"`;
+
+    const models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    let lastError = null;
+
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0,
+              responseMimeType: 'application/json',
+            },
+          }),
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = new Error(`Gemini API error (${response.status}): ${errText}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const textResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResponse) {
+          lastError = new Error('Empty response content from Gemini');
+          continue;
+        }
+
+        const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
+        const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
+        const items = sanitizeItems(rawItems, priceMode);
+
+        return {
+          transcript,
+          items,
+          provider: 'gemini',
+          model,
+        };
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('Failed to parse transcript with Gemini models');
+  }
 }
 
 /**

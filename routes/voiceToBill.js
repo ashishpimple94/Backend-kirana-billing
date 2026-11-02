@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { getLLMProvider } = require('../services/llmService');
+const { parseBillWithRegex } = require('../services/regexParser');
 
 const router = express.Router();
 
@@ -84,6 +85,60 @@ router.post('/voice-to-bill', upload.single('audio'), async (req, res) => {
   return res.status(500).json({
     error: 'आवाज प्रक्रिया करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा (Retry).',
     details: lastErr?.message || 'Failed to process voice audio with AI',
+  });
+});
+
+/**
+ * POST /api/parse-bill
+ * Receives JSON:
+ *  - transcript: string (full recognized speech text)
+ *  - language: 'mr-IN' | 'hi-IN' | 'en-IN' (optional)
+ *  - priceMode: 'per_unit' | 'line_total' (optional)
+ */
+router.post('/parse-bill', async (req, res) => {
+  const { transcript, language = 'mr-IN', priceMode = process.env.PRICE_MODE || 'per_unit' } = req.body || {};
+
+  if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
+    return res.status(400).json({
+      error: 'Transcript text is required in request body.',
+    });
+  }
+
+  const cleanText = transcript.trim();
+  console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}"`);
+
+  // Attempt 1: Gemini 2.5 Flash
+  try {
+    const provider = getLLMProvider();
+    if (typeof provider.parseTranscript === 'function') {
+      const result = await provider.parseTranscript({
+        transcript: cleanText,
+        language,
+        priceMode,
+      });
+
+      console.log(`[POST /api/parse-bill] LLM extracted ${result.items?.length || 0} items.`);
+      return res.json({
+        success: true,
+        transcript: cleanText,
+        items: result.items || [],
+        priceMode,
+        provider: result.provider || 'gemini',
+      });
+    }
+  } catch (err) {
+    console.warn('[POST /api/parse-bill] LLM parser warning, falling back to regex:', err.message);
+  }
+
+  // Fallback: Global Regex Parser (Fast, 0ms, zero-cost)
+  const regexItems = parseBillWithRegex(cleanText, { priceMode });
+  console.log(`[POST /api/parse-bill] Regex fallback extracted ${regexItems.length} items.`);
+  return res.json({
+    success: true,
+    transcript: cleanText,
+    items: regexItems,
+    priceMode,
+    provider: 'regex-fallback',
   });
 });
 
