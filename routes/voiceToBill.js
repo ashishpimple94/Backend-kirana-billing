@@ -5,35 +5,58 @@ const { parseBillWithRegex } = require('../services/regexParser');
 
 const router = express.Router();
 
-// Configure Multer for in-memory storage, 10MB limit
+// ── Multer: kept for backwards-compat if any client still sends multipart ──
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
-  },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const mime = (file.mimetype || '').toLowerCase();
     const name = (file.originalname || '').toLowerCase();
-
-    // Accept any audio or video MIME (covers audio/mp4, audio/m4a, audio/aac,
-    // audio/wav, audio/webm, audio/x-m4a, video/mp4, etc.)
-    const mimeOk =
-      mime.startsWith('audio/') ||
-      mime.startsWith('video/') ||
-      // React Native FormData sometimes sends application/octet-stream
-      // when it can't determine the MIME type — allow it and trust the extension.
-      mime === 'application/octet-stream' ||
-      mime === 'application/x-m4a';
-
+    const mimeOk = mime.startsWith('audio/') || mime.startsWith('video/') ||
+      mime === 'application/octet-stream' || mime === 'application/x-m4a';
     const extOk = /\.(m4a|aac|mp4|wav|webm|3gp|ogg|caf|flac|opus|mp3)$/i.test(name);
-
-    if (mimeOk || extOk) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported audio format: mime=${file.mimetype}, name=${file.originalname}. Use m4a/aac/wav/mp4.`));
-    }
+    if (mimeOk || extOk) cb(null, true);
+    else cb(new Error(`Unsupported audio format: mime=${file.mimetype}, name=${file.originalname}`));
   },
 });
+
+/**
+ * Middleware: accept BOTH multipart/form-data AND raw binary audio bodies.
+ * React Native fetch with { uri, name, type } FormData is unreliable across
+ * Expo versions — raw binary (Content-Type: audio/mp4) is always reliable.
+ */
+function audioUploadMiddleware(req, res, next) {
+  const ct = (req.headers['content-type'] || '').toLowerCase();
+
+  if (ct.startsWith('multipart/form-data')) {
+    // Legacy path: multipart FormData
+    upload.single('audio')(req, res, next);
+    return;
+  }
+
+  if (ct.startsWith('audio/') || ct.startsWith('video/') ||
+      ct === 'application/octet-stream' || ct === 'application/x-m4a') {
+    // New path: raw binary body — read into buffer and fake req.file
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      const buffer = Buffer.concat(chunks);
+      // language and priceMode come from query params when using raw binary
+      req.file = {
+        buffer,
+        size: buffer.length,
+        mimetype: ct,
+        originalname: `voice_order.${ct.split('/')[1]?.split(';')[0] || 'm4a'}`,
+      };
+      next();
+    });
+    req.on('error', next);
+    return;
+  }
+
+  // Unknown content-type — let multer try (will likely produce a friendly error)
+  upload.single('audio')(req, res, next);
+}
 
 /**
  * POST /api/voice-to-bill
@@ -42,7 +65,7 @@ const upload = multer({
  *  - language: 'mr-IN' | 'hi-IN' | 'en-IN' (optional)
  *  - priceMode: 'per_unit' | 'line_total' (optional)
  */
-router.post('/voice-to-bill', upload.single('audio'), async (req, res) => {
+router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
   const file = req.file;
   if (!file || !file.buffer || file.buffer.length === 0) {
     return res.status(400).json({
@@ -50,8 +73,8 @@ router.post('/voice-to-bill', upload.single('audio'), async (req, res) => {
     });
   }
 
-  const language = req.body.language || 'mr-IN';
-  const priceMode = req.body.priceMode || process.env.PRICE_MODE || 'per_unit';
+  const language = req.body?.language || req.query?.language || 'mr-IN';
+  const priceMode = req.body?.priceMode || req.query?.priceMode || process.env.PRICE_MODE || 'per_unit';
 
   console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}`);
 
