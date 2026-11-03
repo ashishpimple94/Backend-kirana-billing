@@ -142,8 +142,15 @@ class GeminiProvider {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
+    // Normalize MIME types to what Gemini accepts.
+    // React Native / Android sometimes sends audio/x-m4a or application/octet-stream.
+    let normalizedMime = mimeType || 'audio/mp4';
+    if (normalizedMime === 'audio/x-m4a' || normalizedMime === 'audio/m4a') normalizedMime = 'audio/mp4';
+    if (normalizedMime === 'application/octet-stream') normalizedMime = 'audio/mp4';
+    if (normalizedMime === 'audio/aac') normalizedMime = 'audio/aac'; // Gemini supports this
+
     const base64Audio = audioBuffer.toString('base64');
-    const models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 
     let lastError = null;
     for (const model of models) {
@@ -163,7 +170,7 @@ class GeminiProvider {
                   { text: `${SYSTEM_PROMPT}\nUser preferred language hint: ${language}. Audio input follows.` },
                   {
                     inlineData: {
-                      mimeType: mimeType || 'audio/mp4',
+                      mimeType: normalizedMime,
                       data: base64Audio,
                     },
                   },
@@ -235,7 +242,7 @@ Rules:
 Preferred language hint: ${language}
 Transcript: "${transcript}"`;
 
-    const models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
     let lastError = null;
 
     for (const model of models) {
@@ -367,12 +374,132 @@ class OpenAIProvider {
 }
 
 /**
+ * Gemini speech-to-text only (audio -> transcript text).
+ * Used when item extraction is delegated to another provider (e.g. Qwen/Ollama),
+ * so the pipeline stays:  speech -> text -> LLM(extract) -> JSON items.
+ */
+async function geminiTranscribe({ audioBuffer, mimeType = 'audio/mp4', language = 'en-IN' }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in environment variables');
+  const base64Audio = audioBuffer.toString('base64');
+  // Try models in order: newest first, fallback to older
+  const transcribeModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  for (const tModel of transcribeModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${tModel}:generateContent?key=${apiKey}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 28000);
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: `Transcribe the following audio exactly as spoken. Language hint: ${language}. Output ONLY the transcribed text — no JSON, no formatting, no explanation.` },
+                  { inlineData: { mimeType: mimeType || 'audio/mp4', data: base64Audio } },
+                ],
+              },
+            ],
+            generationConfig: { temperature: 0 },
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`Gemini transcribe error (${response.status}): ${await response.text()}`);
+        }
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return String(text).trim();
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (tErr) {
+      if (tModel === transcribeModels[transcribeModels.length - 1]) throw tErr;
+    }
+  }
+  return '';
+}
+
+/**
+ * Ollama (Qwen) Provider — local/self-hosted LLM for item extraction from text.
+ * Pipeline step: text -> JSON { items: [{ name, quantity, unit, price }] }.
+ * Endpoint: {OLLAMA_BASE_URL}/api/generate  (format: 'json' forces JSON output).
+ * NOTE: Render cannot reach an Ollama on your local PC — run the backend locally
+ * (or host Ollama) to use this provider. Gemini works everywhere as the default.
+ */
+class OllamaQwenProvider {
+  constructor() {
+    this.baseUrl = (process.env.OLLAMA_BASE_URL || 'http://localhost:11434').replace(/\/+$/, '');
+    this.model = process.env.OLLAMA_MODEL || 'qwen2.5:14b';
+    this.apiKey = process.env.OLLAMA_API_KEY || ''; // optional, if Ollama sits behind an auth proxy
+  }
+
+  async parseTranscript({ transcript, language = 'mr-IN', priceMode = 'per_unit' }) {
+    if (!transcript || !transcript.trim()) return { transcript: '', items: [], provider: 'qwen', model: this.model };
+
+    const prompt = `You extract ALL bill items from a voice transcript of an Indian shopkeeper (English, Hindi, Marathi or Hinglish). The transcript contains MANY items, usually 2 to 50, often with no punctuation between them.
+Item order may vary: '1 kg sugar 60 rs' or 'sugar 1 kg 60 rs'.
+Return ONLY valid JSON, no markdown, no explanation:
+{"items":[{"name":string,"quantity":number,"unit":string,"price":number}]}
+Rules:
+- Return EVERY item mentioned. Never stop after the first item.
+- One object per item, in the order spoken.
+- price = rate per unit in rupees (PRICE_MODE: "${priceMode}").
+- Convert number words (ek, do, teen, one, two, half, aadha, dedh, pachas).
+- Normalize names (rawa, rava, sooji -> Rava; cheeni -> Sugar).
+- If quantity is missing, use 1. If price is missing, use 0.
+
+Preferred language hint: ${language}
+Transcript: "${transcript}"`;
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: this.model,
+          prompt,
+          stream: false,
+          format: 'json',
+          options: { temperature: 0 },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Ollama error (${response.status}): ${await response.text()}`);
+      }
+      const data = await response.json();
+      const textResponse = String(data?.response || '').trim();
+      if (!textResponse) throw new Error('Empty response from Ollama');
+      const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
+      const items = sanitizeItems(rawItems, priceMode);
+      return { transcript, items, provider: 'qwen', model: this.model };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+/**
  * Service Factory
+ * LLM_PROVIDER: 'gemini' (default, cloud) | 'qwen'/'ollama' (local) | 'openai'
  */
 function getLLMProvider(providerName = process.env.LLM_PROVIDER) {
   const p = (providerName || 'gemini').toLowerCase();
   if (p === 'openai') {
     return new OpenAIProvider();
+  }
+  if (p === 'qwen' || p === 'ollama') {
+    return new OllamaQwenProvider();
   }
   return new GeminiProvider();
 }
@@ -381,6 +508,8 @@ module.exports = {
   getLLMProvider,
   GeminiProvider,
   OpenAIProvider,
+  OllamaQwenProvider,
+  geminiTranscribe,
   sanitizeItems,
   canonicalizeUnit,
   normalizeItemName,

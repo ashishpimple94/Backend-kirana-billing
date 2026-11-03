@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { getLLMProvider } = require('../services/llmService');
+const { getLLMProvider, geminiTranscribe, GeminiProvider, OpenAIProvider } = require('../services/llmService');
 const { parseBillWithRegex } = require('../services/regexParser');
 
 const router = express.Router();
@@ -12,15 +12,25 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10 MB
   },
   fileFilter: (req, file, cb) => {
-    // Allow audio files (m4a, aac, mp4, wav, webm, 3gp, ogg)
-    if (
-      file.mimetype.startsWith('audio/') ||
-      file.mimetype === 'video/mp4' ||
-      file.originalname.match(/\.(m4a|aac|mp4|wav|webm|3gp|ogg)$/i)
-    ) {
+    const mime = (file.mimetype || '').toLowerCase();
+    const name = (file.originalname || '').toLowerCase();
+
+    // Accept any audio or video MIME (covers audio/mp4, audio/m4a, audio/aac,
+    // audio/wav, audio/webm, audio/x-m4a, video/mp4, etc.)
+    const mimeOk =
+      mime.startsWith('audio/') ||
+      mime.startsWith('video/') ||
+      // React Native FormData sometimes sends application/octet-stream
+      // when it can't determine the MIME type — allow it and trust the extension.
+      mime === 'application/octet-stream' ||
+      mime === 'application/x-m4a';
+
+    const extOk = /\.(m4a|aac|mp4|wav|webm|3gp|ogg|caf|flac|opus|mp3)$/i.test(name);
+
+    if (mimeOk || extOk) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file format. Only audio recordings (m4a, aac, wav, mp4) are allowed.'));
+      cb(new Error(`Unsupported audio format: mime=${file.mimetype}, name=${file.originalname}. Use m4a/aac/wav/mp4.`));
     }
   },
 });
@@ -45,40 +55,51 @@ router.post('/voice-to-bill', upload.single('audio'), async (req, res) => {
 
   console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}`);
 
-  // 1 Retry on transient failure
-  let attempts = 0;
-  const maxAttempts = 2;
+  // Provider cascade: Gemini (primary) → OpenAI (automatic fallback)
+  // Each provider gets 2 attempts; if both fail we return an error.
+  const audioArgs = { audioBuffer: file.buffer, mimeType: file.mimetype || 'audio/mp4', language, priceMode };
+
+  const providers = [
+    { name: 'gemini', getInstance: () => new GeminiProvider() },
+    { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
+  ];
+
+  // If LLM_PROVIDER is explicitly set to openai or qwen, respect that (skip auto-cascade)
+  const explicitProvider = process.env.LLM_PROVIDER;
+  const providerList = (explicitProvider && explicitProvider !== 'gemini')
+    ? [{ name: explicitProvider, getInstance: () => getLLMProvider() }]
+    : providers;
+
   let lastErr = null;
 
-  while (attempts < maxAttempts) {
-    attempts++;
-    try {
-      const provider = getLLMProvider();
-      const result = await provider.parseAudio({
-        audioBuffer: file.buffer,
-        mimeType: file.mimetype || 'audio/mp4',
-        language,
-        priceMode,
-      });
+  for (const { name, getInstance } of providerList) {
+    const provider = getInstance();
+    if (!provider) continue;
 
-      console.log(`[POST /api/voice-to-bill] Success! Detected ${result.items.length} items. Transcript: "${result.transcript}"`);
-
-      // T6: Silence or noise only -> show "No items detected", no crash
-      return res.json({
-        success: true,
-        transcript: result.transcript || '',
-        items: result.items || [],
-        priceMode,
-        provider: result.provider,
-      });
-    } catch (err) {
-      lastErr = err;
-      console.warn(`[POST /api/voice-to-bill] Attempt ${attempts} failed:`, err.message);
-      if (attempts < maxAttempts) {
-        // Short pause before retry
-        await new Promise((resolve) => setTimeout(resolve, 800));
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        let result;
+        if (typeof provider.parseAudio === 'function') {
+          result = await provider.parseAudio(audioArgs);
+        } else {
+          const transcript = await geminiTranscribe(audioArgs);
+          result = await provider.parseTranscript({ transcript, language, priceMode });
+        }
+        console.log(`[POST /api/voice-to-bill] ${name} attempt ${attempt}: ${result.items.length} items. Transcript: "${result.transcript}"`);
+        return res.json({
+          success: true,
+          transcript: result.transcript || '',
+          items: result.items || [],
+          priceMode,
+          provider: result.provider || name,
+        });
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[POST /api/voice-to-bill] ${name} attempt ${attempt} failed:`, err.message);
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 800));
       }
     }
+    console.warn(`[POST /api/voice-to-bill] ${name} exhausted — trying next provider`);
   }
 
   console.error('[POST /api/voice-to-bill] All attempts failed:', lastErr);
@@ -107,30 +128,35 @@ router.post('/parse-bill', async (req, res) => {
   const cleanText = transcript.trim();
   console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}"`);
 
-  // Attempt 1: Gemini 2.5 Flash
-  try {
-    const provider = getLLMProvider();
-    if (typeof provider.parseTranscript === 'function') {
-      const result = await provider.parseTranscript({
-        transcript: cleanText,
-        language,
-        priceMode,
-      });
+  // Provider cascade: Gemini (primary) → OpenAI (automatic fallback) → Regex (offline)
+  const textProviders = [
+    { name: 'gemini', getInstance: () => new GeminiProvider() },
+    { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
+  ];
+  const explicitTextProvider = process.env.LLM_PROVIDER;
+  const textProviderList = (explicitTextProvider && explicitTextProvider !== 'gemini')
+    ? [{ name: explicitTextProvider, getInstance: () => getLLMProvider() }]
+    : textProviders;
 
-      console.log(`[POST /api/parse-bill] LLM extracted ${result.items?.length || 0} items.`);
+  for (const { name, getInstance } of textProviderList) {
+    const provider = getInstance();
+    if (!provider || typeof provider.parseTranscript !== 'function') continue;
+    try {
+      const result = await provider.parseTranscript({ transcript: cleanText, language, priceMode });
+      console.log(`[POST /api/parse-bill] ${name} extracted ${result.items?.length || 0} items.`);
       return res.json({
         success: true,
         transcript: cleanText,
         items: result.items || [],
         priceMode,
-        provider: result.provider || 'gemini',
+        provider: result.provider || name,
       });
+    } catch (err) {
+      console.warn(`[POST /api/parse-bill] ${name} failed, trying next:`, err.message);
     }
-  } catch (err) {
-    console.warn('[POST /api/parse-bill] LLM parser warning, falling back to regex:', err.message);
   }
 
-  // Fallback: Global Regex Parser (Fast, 0ms, zero-cost)
+  // Final fallback: Global Regex Parser (0ms, offline)
   const regexItems = parseBillWithRegex(cleanText, { priceMode });
   console.log(`[POST /api/parse-bill] Regex fallback extracted ${regexItems.length} items.`);
   return res.json({
