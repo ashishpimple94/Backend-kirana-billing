@@ -4,6 +4,15 @@
  * Preserves the actual language spoken (Marathi, Hindi, or English) in the final bill!
  */
 
+// 0. Deduplicate repeated speech tokens or acoustic stutters (e.g. sakhar-sakhar -> sakhar, साखर-साखर -> साखर)
+function deduplicateSpokenTokens(text) {
+  if (!text || typeof text !== 'string') return '';
+  let s = text.trim();
+  // Repeated hyphenated or space-separated words with full Unicode/Devanagari boundary support
+  s = s.replace(/(?:^|(?<=[^\u0900-\u097Fa-zA-Z]))([\u0900-\u097Fa-zA-Z]+)(?:[-\s]+\1)+(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '$1');
+  return s.trim();
+}
+
 // 1. Marathi/Devanagari Digits
 const DEVANAGARI_DIGITS = {
   '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
@@ -167,36 +176,38 @@ const MARATHI_KIRANA_ITEMS = [
 
 /**
  * Pre-processes spoken Marathi transcript before LLM or Regex parsing:
- * 1. Converts Devanagari numerals to ASCII.
- * 2. Standardizes numbers and fractions.
- * 3. Standardizes units.
- * 4. Cleans colloquial filler speech.
+ * 1. Deduplicates repeated stutter tokens (e.g., "sakhar-sakhar" -> "sakhar").
+ * 2. Converts Devanagari numerals to ASCII.
+ * 3. Standardizes numbers and fractions.
+ * 4. Standardizes units.
+ * 5. Cleans colloquial filler speech.
  */
 function normalizeMarathiTranscript(text) {
   if (!text || typeof text !== 'string') return '';
 
-  let s = text.trim();
+  // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
+  let s = deduplicateSpokenTokens(text);
 
-  // 1. Convert Devanagari digits
+  // 2. Convert Devanagari digits
   s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
 
-  // 2. Remove common spoken filler/connecting words in Marathi
+  // 3. Remove common spoken filler/connecting words in Marathi
   s = s.replace(/\b(आणि|तसेच|त्यानंतर|त्याच्यानंतर|बरं|पुढे|द्या|घ्या|पाहिजे|लाव|टाक|आणखी|आण)\b/gi, ' , ');
 
-  // 3. Normalizes Marathi numbers & fractions
+  // 4. Normalizes Marathi numbers & fractions
   for (const { pattern, value } of MARATHI_NUMBERS) {
     s = s.replace(pattern, ` ${value} `);
   }
 
-  // 4. Normalizes units
+  // 5. Normalizes units
   for (const { pattern, canonical } of MARATHI_UNITS) {
     s = s.replace(pattern, ` ${canonical} `);
   }
 
-  // 5. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs)
+  // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs)
   s = s.replace(/\b(रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\.|रु|rs|rupees|inr)\b/gi, ' rs ');
 
-  // 6. Clean multiple spaces and comma separators
+  // 7. Clean multiple spaces and comma separators
   s = s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ' , ').trim();
 
   return s;
@@ -204,19 +215,21 @@ function normalizeMarathiTranscript(text) {
 
 /**
  * Canonicalizes an extracted item name while strictly preserving the spoken language.
- * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे)
- * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल)
- * If spoken in English -> returns English name (Sugar, Rice)
+ * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे, गोडेतेल)
+ * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल, तेल)
+ * If spoken in English -> returns English name (Sugar, Rice, Oil)
  */
 function canonicalizeMarathiItemName(name, language = 'mr-IN') {
   if (!name || typeof name !== 'string') return '';
-  const clean = name.trim().toLowerCase();
+  const deduped = deduplicateSpokenTokens(name);
+  const clean = deduped.toLowerCase().trim();
 
-  const isDevanagari = /[\u0900-\u097F]/.test(name);
-  const isPureEnglish = /^[A-Za-z0-9\s\-]+$/.test(clean);
-  const langLower = String(language || '').toLowerCase();
+  const isDevanagari = /[\u0900-\u097F]/.test(deduped);
+  const langLower = String(language || 'mr-IN').toLowerCase();
   const isHindi = langLower.startsWith('hi');
-  const isMarathi = langLower.startsWith('mr') || (isDevanagari && !isHindi);
+  const isEnglish = langLower.startsWith('en');
+  // If language is Marathi or default mr-IN
+  const isMarathi = langLower.startsWith('mr') || (!isHindi && !isEnglish);
 
   // Strip common grammatical post-positions (साखरेची -> साखर, तेलाचे -> तेल)
   const stripped = clean
@@ -226,18 +239,23 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
   for (const entry of MARATHI_KIRANA_ITEMS) {
     for (const term of entry.terms) {
       const termLower = term.toLowerCase();
-      if (clean === termLower || stripped === termLower || clean.includes(termLower)) {
-        if (isPureEnglish && !isDevanagari) return entry.canonical;
-        if (isHindi) return entry.hindi || entry.canonical;
+      if (
+        clean === termLower ||
+        stripped === termLower ||
+        clean.split(/\s+/).includes(termLower) ||
+        clean.includes(termLower)
+      ) {
         if (isMarathi) return entry.marathi || entry.canonical;
-        return entry.canonical;
+        if (isHindi) return entry.hindi || entry.canonical;
+        if (isEnglish) return entry.canonical;
+        return entry.marathi || entry.canonical;
       }
     }
   }
 
   // Fallback: If in Devanagari, strip suffixes and return user's actual spoken word
   if (isDevanagari) {
-    return name.trim().replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+    return deduped.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
   }
 
   // English fallback: Title case
@@ -245,6 +263,7 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
 }
 
 module.exports = {
+  deduplicateSpokenTokens,
   normalizeMarathiTranscript,
   canonicalizeMarathiItemName,
   MARATHI_NUMBERS,

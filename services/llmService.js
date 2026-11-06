@@ -5,6 +5,7 @@
  */
 
 const {
+  deduplicateSpokenTokens,
   canonicalizeMarathiItemName,
   normalizeMarathiTranscript,
 } = require('./marathiNormalizer');
@@ -14,12 +15,18 @@ Listen to the shopkeeper speaking fast counter billing items (often 2 to 50 item
 Extract EVERY single item mentioned with high accuracy. Never stop early.
 
 CRITICAL RULES:
-1. SPOKEN LANGUAGE PRESERVATION (MANDATORY):
+1. SPOKEN LANGUAGE PRESERVATION & CLEAN SCRIPT (MANDATORY):
 - Return the item name in the EXACT language spoken by the customer/shopkeeper!
-- If spoken in MARATHI ("साखर", "तूर डाळ", "पोहे", "गोडेतेल", "गूळ", "रवा", "चहा", "साबण", "कांदे", "बटाटे") -> Return clean Marathi names: "साखर", "तूर डाळ", "पोहे", "गोडेतेल", "गूळ", "रवा", "चहा", "साबण", "कांदे", "बटाटे"
-- If spoken in HINDI ("चीनी", "अरहर दाल", "चावल", "तेल", "नमक") -> Return Hindi names: "चीनी", "अरहर दाल", "चावल", "तेल", "नमक"
-- If spoken in ENGLISH ("Sugar", "Rice", "Tea", "Soap") -> Return English names: "Sugar", "Rice", "Tea", "Soap"
-- DO NOT translate Marathi words to English. Keep the bill in the actual spoken language.
+- In MARATHI mode (default mr-IN): ALWAYS output pure Devanagari Marathi script:
+  "साखर" (NEVER output "sakhar" or "sakhar-sakhar"),
+  "पोहे" (NEVER output "pohe" or "poha"),
+  "तूर डाळ" (NEVER output "toor dal" or "tur"),
+  "गोडेतेल" or "तेल" (NEVER output "tel" or "godetel"),
+  "गूळ", "रवा", "चहा", "दूध", "साबण", "कांदे", "बटाटे", "शेंगदाणे", "लसूण", "मीठ".
+- In HINDI mode: ALWAYS output pure Devanagari Hindi script: "चीनी", "अरहर दाल", "चावल", "तेल", "नमक".
+- In ENGLISH mode: ALWAYS output clean English names: "Sugar", "Rice", "Tea", "Soap".
+- NEVER output hyphenated duplicates or acoustic stutter (e.g. "sakhar-sakhar" -> "साखर", "साखर-साखर" -> "साखर", "चहा-चहा" -> "चहा"). Always deduplicate into a single clean product name!
+- In Marathi or Hindi, NEVER output Roman/English alphabet transliterations (no "sakhar", no "tel", no "tandul").
 
 2. MARATHI FRACTIONS & WEIGHTS:
 - "पाव" (paav / pav) = 0.25 (e.g. "पाव किलो साखर" -> 0.25 kg साखर, or 250 g)
@@ -95,10 +102,11 @@ function canonicalizeUnit(unit) {
  */
 function normalizeItemName(rawName, language = 'mr-IN') {
   if (!rawName) return '';
-  const matched = canonicalizeMarathiItemName(rawName, language);
+  const deduped = deduplicateSpokenTokens(rawName);
+  const matched = canonicalizeMarathiItemName(deduped, language);
   if (matched) return matched;
 
-  const clean = rawName.trim();
+  const clean = deduped.trim();
   if (/[\u0900-\u097F]/.test(clean)) {
     return clean.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
   }
