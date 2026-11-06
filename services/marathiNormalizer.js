@@ -13,84 +13,198 @@ function deduplicateSpokenTokens(text) {
   return s.trim();
 }
 
+// Convert Gujarati or other misidentified Indic scripts to Devanagari Marathi script.
+// In Unicode, Devanagari (0x0900 - 0x097F) and Gujarati (0x0A80 - 0x0AFF) share an exact 1-to-1 offset of -0x180.
+function convertIndicScriptToDevanagari(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text.replace(/[\u0A80-\u0AFF]/g, (ch) => {
+    const code = ch.charCodeAt(0) - 0x180;
+    return (code >= 0x0900 && code <= 0x097F) ? String.fromCharCode(code) : ch;
+  });
+}
+
 // 1. Marathi/Devanagari Digits
 const DEVANAGARI_DIGITS = {
   '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
   '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',
 };
 
-// 2. Comprehensive Marathi & Phonetic Number Words
-const MARATHI_NUMBERS = [
-  // Fractions & Colloquial Weights (Longest first to avoid partial replacement)
-  { pattern: /\b(one\s+and\s+a\s+half)\b/gi, value: '1.5' },
-  { pattern: /\b(two\s+and\s+a\s+half)\b/gi, value: '2.5' },
-  { pattern: /\b(साडेतीन|sade\s*teen)\b/gi, value: '3.5' },
-  { pattern: /\b(साडेचार|sade\s*char)\b/gi, value: '4.5' },
-  { pattern: /\b(साडेपाच|sade\s*paach|sade\s*panch)\b/gi, value: '5.5' },
-  { pattern: /\b(साडेसहा|sade\s*saha)\b/gi, value: '6.5' },
-  { pattern: /\b(साडेसात|sade\s*saat)\b/gi, value: '7.5' },
-  { pattern: /\b(साडेआठ|sade\s*aath)\b/gi, value: '8.5' },
-  { pattern: /\b(साडेनऊ|sade\s*nau)\b/gi, value: '9.5' },
-  { pattern: /\b(साडेदहा|sade\s*daha)\b/gi, value: '10.5' },
-  { pattern: /\b(सव्वा|savva|sawa)\b/gi, value: '1.25' },
-  { pattern: /\b(दीड|deed|dedh|deedh)\b/gi, value: '1.5' },
-  { pattern: /\b(अडीच|adeech|dhai|adhai)\b/gi, value: '2.5' },
-  { pattern: /\b(पाऊण|paun|paune|pauna)\b/gi, value: '0.75' },
-  { pattern: /\b(अर्धा|अर्धी|अर्धे|ardha|ardhi|ardhe|aadha|adha|half)\b/gi, value: '0.5' },
-  { pattern: /\b(पावशेर|paavsher|pavsher)\b/gi, value: '0.25' },
-  { pattern: /\b(पाव|paav|pav|quarter)\b/gi, value: '0.25' },
+// Helper: Unicode-safe Regex generator without relying on ASCII \b
+function makeUnicodeRegex(patternStr, flags = 'gi') {
+  return new RegExp(`(?:^|(?<=[^\\u0900-\\u097Fa-zA-Z0-9]))(?:${patternStr})(?=[^\\u0900-\\u097Fa-zA-Z0-9]|$)`, flags);
+}
 
-  // Whole Numbers (1 - 100)
-  { pattern: /\b(शंभर|shambhar|sau|hundred)\b/gi, value: '100' },
-  { pattern: /\b(नव्वद|navvad|navve|nabbe)\b/gi, value: '90' },
-  { pattern: /\b(ऐंशी|aishi|ayshi|assi)\b/gi, value: '80' },
-  { pattern: /\b(पंचाहत्तर|panchahattar|pachhattar)\b/gi, value: '75' },
-  { pattern: /\b(सत्तर|sattar)\b/gi, value: '70' },
-  { pattern: /\b(पासष्ट|pasasht|painsath)\b/gi, value: '65' },
-  { pattern: /\b(साठ|saath|sath)\b/gi, value: '60' },
-  { pattern: /\b(पंचावन्न|panchavanna|pachpan)\b/gi, value: '55' },
-  { pattern: /\b(पन्नास|pannas|pachas)\b/gi, value: '50' },
-  { pattern: /\b(पंचेचाळीस|panchechalis|paintalis)\b/gi, value: '45' },
-  { pattern: /\b(चाळीस|chalis|chaalis)\b/gi, value: '40' },
-  { pattern: /\b(पस्तीस|pastis|paintis)\b/gi, value: '35' },
-  { pattern: /\b(तीस|tees|tis)\b/gi, value: '30' },
-  { pattern: /\b(पंचवीस|panchvis|pachis)\b/gi, value: '25' },
-  { pattern: /\b(वीस|vees|bees)\b/gi, value: '20' },
-  { pattern: /\b(एकोणीस|ekonis|unnis)\b/gi, value: '19' },
-  { pattern: /\b(अठरा|athra|athara|athrah)\b/gi, value: '18' },
-  { pattern: /\b(सतरा|satra|satrah)\b/gi, value: '17' },
-  { pattern: /\b(सोळा|sola|solah)\b/gi, value: '16' },
-  { pattern: /\b(पंधरा|pandhra|pandrah)\b/gi, value: '15' },
-  { pattern: /\b(चौदा|chauda|chaudah)\b/gi, value: '14' },
-  { pattern: /\b(तेरा|tera|terah)\b/gi, value: '13' },
-  { pattern: /\b(बारा|bara|barah)\b/gi, value: '12' },
-  { pattern: /\b(अकरा|akara|gyarah)\b/gi, value: '11' },
-  { pattern: /\b(दहा|daha|das)\b/gi, value: '10' },
-  { pattern: /\b(नऊ|nau|nav)\b/gi, value: '9' },
-  { pattern: /\b(आठ|aath|ath)\b/gi, value: '8' },
-  { pattern: /\b(सात|saat|sat)\b/gi, value: '7' },
-  { pattern: /\b(सहा|saha|chha|chheh)\b/gi, value: '6' },
-  { pattern: /\b(पाच|paach|panch|pach)\b/gi, value: '5' },
-  { pattern: /\b(चार|chaar|char)\b/gi, value: '4' },
-  { pattern: /\b(तीन|teen|tin)\b/gi, value: '3' },
-  { pattern: /\b(दोन|don|do|two)\b/gi, value: '2' },
-  { pattern: /\b(एक|ek|one)\b/gi, value: '1' },
-  { pattern: /\b(शून्य|shunya|zero)\b/gi, value: '0' },
-  { pattern: /\b(डझन|दर्जन|dozen)\b/gi, value: '12' },
-];
+// 2. Comprehensive Marathi & Indian Number Words (Hundreds, Compounds, Tens, Units, Fractions)
+const HUNDREDS_MAP = {
+  // Marathi Devanagari & Phonetic Hundreds
+  'एकशे': 100, 'ekshe': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
+  'दोनशे': 200, 'donshe': 200, 'do sau': 200, 'two hundred': 200,
+  'तीनशे': 300, 'teenshe': 300, 'teen sau': 300, 'three hundred': 300,
+  'चारशे': 400, 'charshe': 400, 'char sau': 400, 'four hundred': 400,
+  'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'paanch sau': 500, 'five hundred': 500,
+  'सहाशे': 600, 'sahashe': 600, 'chha sau': 600, 'six hundred': 600,
+  'सातशे': 700, 'saatshe': 700, 'saat sau': 700, 'seven hundred': 700,
+  'आठशे': 800, 'aathshe': 800, 'aath sau': 800, 'eight hundred': 800,
+  'नऊशे': 900, 'naushe': 900, 'nau sau': 900, 'nine hundred': 900,
+  'हजार': 1000, 'hazar': 1000, 'ek hazar': 1000, 'one thousand': 1000,
 
-// 3. Marathi Unit Normalization
+  // Colloquial half-hundreds
+  'साडेपाचशे': 550, 'sade pachshe': 550, 'sade paachshe': 550,
+  'साडेचारशे': 450, 'sade charshe': 450,
+  'साडेतीनशे': 350, 'sade teenshe': 350,
+  'अडीचशे': 250, 'adeechshe': 250, 'dhai sau': 250,
+  'दीडशे': 150, 'deedshe': 150, 'dedh sau': 150,
+  'साडेसहाशे': 650, 'sade sahashe': 650,
+  'साडेसातशे': 750, 'sade saatshe': 750,
+  'साडेआठशे': 850, 'sade aathshe': 850,
+  'साडेनऊशे': 950, 'sade naushe': 950,
+  'सव्वाशे': 125, 'savvashe': 125,
+};
+
+const UNITS_AND_TENS_MAP = {
+  // 90s
+  'नव्व्याण्णव': 99, 'अठ्ठ्याण्णव': 98, 'सत्याण्णव': 97, 'शहाण्णव': 96,
+  'पंच्याण्णव': 95, 'चौऱ्याण्णव': 94, 'त्र्याण्णव': 93, 'ब्याण्णव': 92, 'एक्याण्णव': 91,
+  'navvad': 90, 'navve': 90, 'nabbe': 90, 'नव्वद': 90, 'नब्बे': 90, 'ninety': 90,
+
+  // 80s
+  'एक्याऐंशी': 81, 'ब्याऐंशी': 82, 'त्र्याऐंशी': 83, 'चौऱ्याऐंशी': 84,
+  'पंच्याऐंशी': 85, 'शहाऐंशी': 86, 'सत्याऐंशी': 87, 'अठ्ठ्याऐंशी': 88,
+  'एकोणनव्वद': 89, 'nawasi': 89, 'ekonnavvad': 89,
+  'aishi': 80, 'ayshi': 80, 'assi': 80, 'ऐंशी': 80, 'अस्सी': 80, 'eighty': 80,
+
+  // 70s
+  'एकाहत्तर': 71, 'बहात्तर': 72, 'त्र्याहत्तर': 73, 'चौऱ्याहत्तर': 74,
+  'पंचाहत्तर': 75, 'panchahattar': 75, 'pachhattar': 75,
+  'शहात्तर': 76, 'सत्याहत्तर': 77, 'अठ्ठ्याहत्तर': 78, 'एकोणऐंशी': 79,
+  'sattar': 70, 'सत्तर': 70, 'seventy': 70,
+
+  // 60s
+  'एकसष्ट': 61, 'एकसष्ठ': 61, 'बासष्ट': 62, 'बासष्ठ': 62, 'त्रेसष्ट': 63, 'त्रेसष्ठ': 63,
+  'चौसष्ट': 64, 'चौसष्ठ': 64, 'पासष्ट': 65, 'पासष्ठ': 65, 'pasasht': 65, 'painsath': 65,
+  'शासष्ट': 66, 'शासष्ठ': 66, 'सदसष्ट': 67, 'सदसष्ठ': 67,
+  'अडुसष्ट': 68, 'अडुसष्ठ': 68, 'अडसठ': 68, 'adusht': 68, 'adusacht': 68, 'adsath': 68,
+  'एकोणसत्तर': 69,
+  'saath': 60, 'sath': 60, 'साठ': 60, 'sixty': 60,
+
+  // 50s
+  'एकावन्न': 51, 'बावन्न': 52, 'त्रेपन्न': 53, 'चोपन्न': 54,
+  'पंचावन्न': 55, 'panchavanna': 55, 'pachpan': 55,
+  'छप्पन्न': 56, 'सत्तावन्न': 57, 'अठ्ठावन्न': 58, 'एकोणसाठ': 59,
+  'pannas': 50, 'pachas': 50, 'पन्नास': 50, 'पचास': 50, 'fifty': 50,
+
+  // 40s
+  'एकेचाळीस': 41, 'बेचाळीस': 42, 'त्रेचाळीस': 43, 'चव्वेचाळीस': 44,
+  'पंचेचाळीस': 45, 'panchechalis': 45, 'paintalis': 45,
+  'शेहेचाळीस': 46, 'सत्तेचाळीस': 47, 'अट्ठेचाळीस': 48, 'एकोणपन्नास': 49,
+  'chalis': 40, 'chaalis': 40, 'चाळीस': 40, 'चालीस': 40, 'forty': 40,
+
+  // 30s
+  'एकतीस': 31, 'बत्तीस': 32, 'तेहतीस': 33, 'चौतीस': 34,
+  'पस्तीस': 35, 'pastis': 35, 'paintis': 35,
+  'छत्तीस': 36, 'सदतीस': 37, 'अडतीस': 38, 'एकोणचाळीस': 39,
+  'tees': 30, 'tis': 30, 'तीस': 30, 'thirty': 30,
+
+  // 20s
+  'एकवीस': 21, 'बावीस': 22, 'तेवीस': 23, 'चोवीस': 24,
+  'पंचवीस': 25, 'panchvis': 25, 'pachis': 25, 'पच्चीस': 25, 'twentyfive': 25,
+  'सव्वीस': 26, 'सत्तावीस': 27, 'अठ्ठावीस': 28, 'एकोणतीस': 29,
+  'vees': 20, 'bees': 20, 'वीस': 20, 'बीस': 20, 'twenty': 20,
+
+  // 1-19
+  'एकोणीस': 19, 'ekonis': 19, 'unnis': 19, 'nineteen': 19,
+  'अठरा': 18, 'athra': 18, 'athara': 18, 'eighteen': 18,
+  'सतरा': 17, 'satra': 17, 'satrah': 17, 'seventeen': 17,
+  'सोळा': 16, 'sola': 16, 'solah': 16, 'sixteen': 16,
+  'पंधरा': 15, 'pandhra': 15, 'pandrah': 15, 'fifteen': 15,
+  'चौदा': 14, 'chauda': 14, 'chaudah': 14, 'fourteen': 14,
+  'तेरा': 13, 'tera': 13, 'terah': 13, 'thirteen': 13,
+  'बारा': 12, 'bara': 12, 'barah': 12, 'twelve': 12, 'डझन': 12, 'dozen': 12,
+  'अकरा': 11, 'akara': 11, 'gyarah': 11, 'eleven': 11,
+  'दहा': 10, 'daha': 10, 'das': 10, 'ten': 10,
+  'नऊ': 9, 'nau': 9, 'nav': 9, 'nine': 9,
+  'आठ': 8, 'aath': 8, 'ath': 8, 'eight': 8,
+  'सात': 7, 'saat': 7, 'sat': 7, 'seven': 7,
+  'सहा': 6, 'saha': 6, 'chha': 6, 'chheh': 6, 'six': 6,
+  'पाच': 5, 'paach': 5, 'panch': 5, 'pach': 5, 'five': 5,
+  'चार': 4, 'chaar': 4, 'char': 4, 'four': 4,
+  'तीन': 3, 'teen': 3, 'tin': 3, 'three': 3,
+  'दोन': 2, 'don': 2, 'do': 2, 'two': 2,
+  'एक': 1, 'ek': 1, 'one': 1,
+  'शून्य': 0, 'shunya': 0, 'zero': 0,
+
+  // Fractions & Colloquials
+  'साडेतीन': 3.5, 'sade teen': 3.5,
+  'साडेचार': 4.5, 'sade char': 4.5,
+  'साडेपाच': 5.5, 'sade paach': 5.5,
+  'सव्वा': 1.25, 'savva': 1.25, 'sawa': 1.25,
+  'दीड': 1.5, 'deed': 1.5, 'dedh': 1.5,
+  'अडीच': 2.5, 'adeech': 2.5, 'dhai': 2.5,
+  'पाऊण': 0.75, 'paun': 0.75,
+  'अर्धा': 0.5, 'अर्धी': 0.5, 'अर्धे': 0.5, 'ardha': 0.5, 'aadha': 0.5, 'half': 0.5,
+  'पावशेर': 0.25, 'पाव': 0.25, 'paav': 0.25, 'pav': 0.25, 'quarter': 0.25,
+};
+
+function parseMarathiSpokenNumbers(text) {
+  if (!text || typeof text !== 'string') return '';
+  let s = text.trim();
+
+  // 1. Convert Devanagari digits [०-९]
+  s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
+
+  const replaceWord = (targetStr, word, replacement) => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?:^|(?<=[^\\u0900-\\u097Fa-zA-Z0-9]))${escaped}(?=[^\\u0900-\\u097Fa-zA-Z0-9]|$)`, 'gi');
+    return targetStr.replace(regex, replacement);
+  };
+
+  // 2. Compound Hundreds (e.g. एकशे चाळीस -> 140, पाचशे अडुसष्ट -> 568, सातशे एकोणनव्वद -> 789, पाचशे पन्नास -> 550)
+  const sortedHundreds = Object.keys(HUNDREDS_MAP).sort((a, b) => b.length - a.length);
+  const sortedUnitsTens = Object.keys(UNITS_AND_TENS_MAP).sort((a, b) => b.length - a.length);
+
+  for (const hWord of sortedHundreds) {
+    const hVal = HUNDREDS_MAP[hWord];
+
+    // Check if followed by unit/tens word: e.g. "एकशे चाळीस"
+    for (const uWord of sortedUnitsTens) {
+      const uVal = UNITS_AND_TENS_MAP[uWord];
+      if (typeof uVal !== 'number' || uVal <= 0 || uVal >= 100) continue;
+
+      const regex = new RegExp(`(?:^|(?<=[^\\u0900-\\u097Fa-zA-Z0-9]))${hWord}\\s+${uWord}(?=[^\\u0900-\\u097Fa-zA-Z0-9]|$)`, 'gi');
+      if (regex.test(s)) {
+        s = s.replace(regex, ` ${hVal + uVal} `);
+      }
+    }
+
+    // Check if followed by an already-numeric digit: e.g. "एकशे 40" -> 140
+    const numRegex = new RegExp(`(?:^|(?<=[^\\u0900-\\u097Fa-zA-Z0-9]))${hWord}\\s+(\\d{1,2})(?=[^\\u0900-\\u097Fa-zA-Z0-9]|$)`, 'gi');
+    s = s.replace(numRegex, (_, d) => ` ${hVal + parseInt(d, 10)} `);
+
+    // Replace standalone hundreds (e.g. "पाचशे", "नऊशे", "साडेपाचशे")
+    s = replaceWord(s, hWord, ` ${hVal} `);
+  }
+
+  // 3. Standalone Units & Tens (e.g. 60, 50, 90, 80, 40, 10, 5)
+  for (const uWord of sortedUnitsTens) {
+    const uVal = UNITS_AND_TENS_MAP[uWord];
+    s = replaceWord(s, uWord, ` ${uVal} `);
+  }
+
+  return s;
+}
+
+// 3. Marathi Unit Normalization (Unicode-safe)
 const MARATHI_UNITS = [
-  { pattern: /\b(किलो|किग्र|कि\.ग्रा|kilo|kilos|kg|kgs|kilogram)\b/gi, canonical: 'kg' },
-  { pattern: /\b(ग्रॅम|ग्राम|ग्रा|gram|grams|gm|gms|g)\b/gi, canonical: 'g' },
-  { pattern: /\b(लिटर|लीटर|litre|litres|liter|liters|ltr|ltrs|l)\b/gi, canonical: 'litre' },
-  { pattern: /\b(मिली|मिलीलिटर|ml|mls|millilitre)\b/gi, canonical: 'ml' },
-  { pattern: /\b(पुडा|पुडे|पुडी|पाकीट|पाकिटे|packet|packets|pkt|pkts|pouch)\b/gi, canonical: 'packet' },
-  { pattern: /\b(नग|पीस|piece|pieces|pcs|pc|item|items)\b/gi, canonical: 'piece' },
-  { pattern: /\b(बाटली|बाटल्या|bottle|bottles|btl)\b/gi, canonical: 'bottle' },
-  { pattern: /\b(डबा|डबे|खोके|खोका|बॉक्स|box|boxes|carton)\b/gi, canonical: 'box' },
-  { pattern: /\b(डझन|दर्जन|dozen|dozens)\b/gi, canonical: 'dozen' },
-  { pattern: /\b(तोळा|तोळे|tola)\b/gi, canonical: 'tola' },
+  { pattern: makeUnicodeRegex('किलो|किग्र|कि\\.ग्रा|kilo|kilos|kg|kgs|kilogram'), canonical: 'kg' },
+  { pattern: makeUnicodeRegex('ग्रॅम|ग्राम|ग्रा|gram|grams|gm|gms|g'), canonical: 'g' },
+  { pattern: makeUnicodeRegex('लिटर|लीटर|litre|litres|liter|liters|ltr|ltrs|l'), canonical: 'litre' },
+  { pattern: makeUnicodeRegex('मिली|मिलीलिटर|ml|mls|millilitre'), canonical: 'ml' },
+  { pattern: makeUnicodeRegex('पुडा|पुडे|पुडी|पाकीट|पाकिटे|packet|packets|pkt|pkts|pouch'), canonical: 'packet' },
+  { pattern: makeUnicodeRegex('नग|पीस|piece|pieces|pcs|pc|item|items'), canonical: 'piece' },
+  { pattern: makeUnicodeRegex('बाटली|बाटल्या|bottle|bottles|btl'), canonical: 'bottle' },
+  { pattern: makeUnicodeRegex('डबा|डबे|खोके|खोका|बॉक्स|box|boxes|carton'), canonical: 'box' },
+  { pattern: makeUnicodeRegex('डझन|दर्जन|dozen|dozens'), canonical: 'dozen' },
+  { pattern: makeUnicodeRegex('तोळा|तोळे|tola'), canonical: 'tola' },
 ];
 
 // 4. Comprehensive Multilingual Kirana Item Catalog
@@ -150,7 +264,7 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Milk', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा'] },
+  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा'] },
   { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
   { canonical: 'Peanuts', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'dane', 'peanuts', 'groundnuts'] },
   { canonical: 'Cashews', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
@@ -178,34 +292,37 @@ const MARATHI_KIRANA_ITEMS = [
  * Pre-processes spoken Marathi transcript before LLM or Regex parsing:
  * 1. Deduplicates repeated stutter tokens (e.g., "sakhar-sakhar" -> "sakhar").
  * 2. Converts Devanagari numerals to ASCII.
- * 3. Standardizes numbers and fractions.
- * 4. Standardizes units.
+ * 3. Standardizes numbers, fractions, and compound hundreds (e.g. एकशे चाळीस -> 140, पाचशे अडुसष्ट -> 568).
+ * 4. Standardizes units (Unicode-safe).
  * 5. Cleans colloquial filler speech.
  */
 function normalizeMarathiTranscript(text) {
   if (!text || typeof text !== 'string') return '';
 
-  // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
-  let s = deduplicateSpokenTokens(text);
+  // 0. Convert any misidentified Indic script (like Gujarati) to pure Marathi Devanagari
+  let s = convertIndicScriptToDevanagari(text);
 
-  // 2. Convert Devanagari digits
+  // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
+  s = deduplicateSpokenTokens(s);
+
+  // 2. Convert Devanagari digits [०-९]
   s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
 
-  // 3. Remove common spoken filler/connecting words in Marathi
-  s = s.replace(/\b(आणि|तसेच|त्यानंतर|त्याच्यानंतर|बरं|पुढे|द्या|घ्या|पाहिजे|लाव|टाक|आणखी|आण)\b/gi, ' , ');
+  // 3. Remove common spoken filler/connecting words in Marathi (Unicode-safe)
+  const fillerRegex = makeUnicodeRegex('आणि|तसेच|त्यानंतर|त्याच्यानंतर|बरं|पुढे|द्या|घ्या|पाहिजे|लाव|टाक|आणखी|आण');
+  s = s.replace(fillerRegex, ' , ');
 
-  // 4. Normalizes Marathi numbers & fractions
-  for (const { pattern, value } of MARATHI_NUMBERS) {
-    s = s.replace(pattern, ` ${value} `);
-  }
+  // 4. Normalizes Marathi numbers, compound hundreds & fractions (e.g. 140, 60, 50, 90, 80, 40, 500, 10, 5, 900, 568, 789, 550, 110, 108)
+  s = parseMarathiSpokenNumbers(s);
 
   // 5. Normalizes units
   for (const { pattern, canonical } of MARATHI_UNITS) {
     s = s.replace(pattern, ` ${canonical} `);
   }
 
-  // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs)
-  s = s.replace(/\b(रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\.|रु|rs|rupees|inr)\b/gi, ' rs ');
+  // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs) (Unicode-safe)
+  const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|rs|rupees|inr|₹|\\/-');
+  s = s.replace(priceRegex, ' rs ');
 
   // 7. Clean multiple spaces and comma separators
   s = s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ' , ').trim();
@@ -215,13 +332,14 @@ function normalizeMarathiTranscript(text) {
 
 /**
  * Canonicalizes an extracted item name while strictly preserving the spoken language.
- * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे, गोडेतेल)
- * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल, तेल)
- * If spoken in English -> returns English name (Sugar, Rice, Oil)
+ * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे, गोडेतेल, चहा)
+ * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल, तेल, चाय)
+ * If spoken in English -> returns English name (Sugar, Rice, Oil, Tea)
  */
 function canonicalizeMarathiItemName(name, language = 'mr-IN') {
   if (!name || typeof name !== 'string') return '';
-  const deduped = deduplicateSpokenTokens(name);
+  const converted = convertIndicScriptToDevanagari(name);
+  const deduped = deduplicateSpokenTokens(converted);
   const clean = deduped.toLowerCase().trim();
 
   const isDevanagari = /[\u0900-\u097F]/.test(deduped);
@@ -264,9 +382,12 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
 
 module.exports = {
   deduplicateSpokenTokens,
+  convertIndicScriptToDevanagari,
   normalizeMarathiTranscript,
+  parseMarathiSpokenNumbers,
   canonicalizeMarathiItemName,
-  MARATHI_NUMBERS,
+  HUNDREDS_MAP,
+  UNITS_AND_TENS_MAP,
   MARATHI_UNITS,
   MARATHI_KIRANA_ITEMS,
 };

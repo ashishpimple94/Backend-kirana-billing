@@ -6,6 +6,7 @@
 
 const {
   deduplicateSpokenTokens,
+  convertIndicScriptToDevanagari,
   canonicalizeMarathiItemName,
   normalizeMarathiTranscript,
 } = require('./marathiNormalizer');
@@ -39,16 +40,32 @@ CRITICAL RULES:
 - "पावशेर" = 0.25 kg, "अर्धा शेर" = 0.5 kg, "शेर" = 1 kg
 - "डझन" (dozen) = 12 piece, "नग" = piece, "पुडा" / "पाकीट" = packet
 
-3. MARATHI NUMBERS:
-एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90, शंभर=100, दोनशे=200, पाचशे=500.
+3. MARATHI NUMBERS, HUNDREDS & COMPOUNDS (CRITICAL):
+- Single numbers: एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90.
+- Hundreds: शंभर/एकशे=100, दोनशे=200, तीनशे=300, चारशे=400, पाचशे=500, सहाशे=600, सातशे=700, आठशे=800, नऊशे=900, एक हजार=1000.
+- Colloquial half-hundreds: साडेपाचशे=550, साडेचारशे=450, साडेतीनशे=350, अडीचशे=250, दीडशे=150.
+- Compound hundreds & prices (MUST align exactly with spoken price!):
+  "एकशे चाळीस" (ekshe chalis) = 140
+  "एकशे दहा" (ekshe daha) = 110
+  "एकशे आठ" (ekshe aath) = 108
+  "पाचशे अडुसष्ट" / "पाचशे अडसठ" = 568
+  "सातशे एकोणनव्वद" = 789
+  "पाचशे पन्नास" / "साडेपाचशे" = 550
+  "पाचशे" = 500
+  "नऊशे" = 900
+  "साठ" = 60, "पन्नास" = 50, "नव्वद" = 90, "ऐंशी" = 80, "चाळीस" = 40, "दहा" = 10, "पाच" = 5.
 
 4. EXACT NUMBER & PRICING ALIGNMENT:
 - Extract the exact numbers spoken.
-- "दोन किलो साखर चाळीस रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 40
+- "दोन किलो साखर एकशे चाळीस रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 140
+- "एक किलो साखर पाचशे अडुसष्ट रुपये" -> name: "साखर", quantity: 1, unit: "kg", price: 568
+- "दोन किलो साखर सातशे एकोणनव्वद रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 789
+- "दोन किलो साखर पाचशे पन्नास रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 550
+- "एकशे दहा रुपयांचे तेल" -> name: "तेल", quantity: 1, unit: "litre", price: 110
+- "एकशे आठ रुपयांची साखर" -> name: "साखर", quantity: 1, unit: "packet", price: 108
 - "अर्धा किलो पोहे तीस रुपये" -> name: "पोहे", quantity: 0.5, unit: "kg", price: 30
 - "पाव किलो चहा पन्नास रुपये" -> name: "चहा", quantity: 0.25, unit: "kg", price: 50
 - "दीड लिटर तेल दोनशे रुपये" -> name: "तेल", quantity: 1.5, unit: "litre", price: 200
-- "50 रुपयांची साखर" -> name: "साखर", quantity: 1, unit: "packet", price: 50
 - If quantity is missing use 1. If price is missing use 0.
 
 Return ONLY JSON:
@@ -102,7 +119,8 @@ function canonicalizeUnit(unit) {
  */
 function normalizeItemName(rawName, language = 'mr-IN') {
   if (!rawName) return '';
-  const deduped = deduplicateSpokenTokens(rawName);
+  const converted = convertIndicScriptToDevanagari(rawName);
+  const deduped = deduplicateSpokenTokens(converted);
   const matched = canonicalizeMarathiItemName(deduped, language);
   if (matched) return matched;
 
@@ -238,7 +256,7 @@ class GeminiProvider {
         const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
 
-        const transcript = String(parsed.transcript || '').trim();
+        const transcript = convertIndicScriptToDevanagari(String(parsed.transcript || '').trim());
         const items = sanitizeItems(parsed.items, priceMode, language);
 
         return {
@@ -347,6 +365,8 @@ class OpenAIProvider {
     formData.append('file', blob, 'audio.m4a');
     formData.append('model', 'whisper-1');
     if (language) formData.append('language', language.split('-')[0]);
+    // Guide Whisper to transcribe in pure Marathi Devanagari (avoid Gujarati hallucination)
+    formData.append('prompt', 'मराठी किराणा बिल: चहा, साखर, तूर डाळ, पोहे, तेल, गहू, तांदूळ, गव्हाचे पीठ, साबण, कांदे, बटाटे, दूध, बिस्कीट, रुपये, किलो, ग्रॅम, लिटर, १००, ५००, ५२०, १४०, ६०, ५०, ९०, ८०, ४०, १०, ५, ९००, ५६८, ७८९, ५५०, ११०, १०८');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -360,10 +380,14 @@ class OpenAIProvider {
     }
 
     const whisperData = await whisperRes.json();
-    const transcript = whisperData.text || '';
-    if (!transcript) {
+    const rawTranscript = whisperData.text || '';
+    if (!rawTranscript) {
       return { transcript: '', items: [], provider: 'openai' };
     }
+
+    // Convert any misidentified Indic script (e.g. Gujarati chars) directly to Devanagari Marathi
+    const transcript = convertIndicScriptToDevanagari(rawTranscript);
+    const preNormalized = normalizeMarathiTranscript(transcript);
 
     // Step 2: Extract items using gpt-4o-mini
     const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -378,7 +402,7 @@ class OpenAIProvider {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `Transcript: "${transcript}"` },
+          { role: 'user', content: `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"` },
         ],
       }),
     });
@@ -394,7 +418,7 @@ class OpenAIProvider {
     const items = sanitizeItems(parsed.items, priceMode, language);
 
     return {
-      transcript: parsed.transcript || transcript,
+      transcript: convertIndicScriptToDevanagari(parsed.transcript || transcript),
       items,
       provider: 'openai',
     };
