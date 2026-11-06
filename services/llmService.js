@@ -4,16 +4,60 @@
  * and OpenAI (Whisper / gpt-4o-mini-transcribe + gpt-4o-mini) as alternative.
  */
 
-const SYSTEM_PROMPT = `You are a billing assistant for an Indian shop. Listen to this audio (English, Hindi, Marathi or Hinglish). The shopkeeper speaks MANY items, usually 2 to 50, with or without pauses between them.
-Extract EVERY item mentioned. Never stop after the first item.
-Item order may vary: '1 kg sugar 60 rs' or 'sugar 1 kg 60 rs'.
-Convert number words (ek, do, teen, one, two, half, aadha, dedh, pachas) to numbers. Normalize names (rawa, rava, sooji -> Rava; cheeni -> Sugar). Units: kg, g, litre, ml, piece, packet, dozen.
-If quantity is missing use 1. If price is missing use 0.
-price = rate per unit in rupees.
+const {
+  canonicalizeMarathiItemName,
+  normalizeMarathiTranscript,
+} = require('./marathiNormalizer');
+
+const SYSTEM_PROMPT = `You are an expert bilingual Kirana Billing Assistant specialized in Indian dialects (especially Marathi, Hindi, English, and Hinglish).
+Listen to the shopkeeper speaking fast counter billing items (often 2 to 50 items spoken continuously).
+Extract EVERY single item mentioned. Never stop early.
+
+CRITICAL MARATHI KIRANA RULES:
+1. MARATHI FRACTIONS & WEIGHTS:
+- "पाव" (paav / pav) = 0.25 (e.g. "पाव किलो साखर" -> 0.25 kg Sugar, or 250 g)
+- "अर्धा" / "अर्धी" (ardha / ardhi) = 0.5 (e.g. "अर्धा किलो तेल" -> 0.5 litre Oil, or 500 ml)
+- "पाऊण" (paun) = 0.75
+- "सव्वा" (savva) = 1.25
+- "दीड" (deed / dedh) = 1.5
+- "अडीच" (adeech / dhai) = 2.5
+- "साडेतीन" = 3.5, "साडेचार" = 4.5, "साडेपाच" = 5.5
+- "पावशेर" = 0.25 kg, "अर्धा शेर" = 0.5 kg, "शेर" = 1 kg
+- "डझन" (dozen) = 12 piece, "नग" = piece, "पुडा" / "पाकीट" = packet
+
+2. MARATHI NUMBERS:
+एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90, शंभर=100, दोनशे=200, पाचशे=500.
+
+3. MARATHI KIRANA VOCABULARY & SUFFIXES:
+- "साखरेची" / "साखर" / "sakhar" -> Sugar
+- "तुरीची डाळ" / "तूर डाळ" -> Toor Dal
+- "चना डाळ" / "हरभरा डाळ" -> Chana Dal
+- "गोडेतेल" / "शेंगदाणा तेल" / "तेल" -> Cooking Oil
+- "गव्हाचे पीठ" / "कणिक" / "आटा" -> Atta
+- "बारीक रवा" / "जाडा रवा" / "रवा" -> Rava
+- "पोहे" / "जाडे पोहे" / "पातळ पोहे" -> Poha
+- "गूळ" / "गुळ" -> Jaggery
+- "तांदूळ" / "भात" / "कोलम" / "इंद्रायणी" -> Rice
+- "मीठ" / "टाटा मीठ" -> Salt
+- "हळद" / "हळदी" -> Turmeric
+- "जिरे" / "जिरं" -> Cumin
+- "मोहरी" / "राई" -> Mustard
+- "लाल तिखट" / "मिरची पावडर" -> Red Chilli Powder
+- "साबण" / "लाईफबॉय" / "निरमा" / "सर्फ" -> Soap
+- "काडेपेटी" / "माचिस" -> Matchbox
+- "अगरबत्ती" -> Agarbatti
+- "शेंगदाणे" / "दाणे" -> Peanuts
+- "दूध" -> Milk
+- "चहा" / "चाय" -> Tea
+
+4. PRICING & QUANTITY:
+- If speaker says "50 रुपयांची साखर" -> item: "Sugar", quantity: 1, unit: "packet", price: 50.
+- If speaker says "साखर 40 रुपये किलो 2 किलो" -> item: "Sugar", quantity: 2, unit: "kg", price: 40.
+- If quantity is missing use 1. If price is missing use 0.
+
 Return ONLY JSON:
 {"transcript": string,
- "items": [{"name": string, "quantity": number,
-             "unit": string, "price": number}]}
+ "items": [{"name": string, "quantity": number, "unit": string, "price": number}]}
 One object per item, in the order spoken.`;
 
 const JSON_SCHEMA = {
@@ -43,39 +87,29 @@ const JSON_SCHEMA = {
 function canonicalizeUnit(unit) {
   if (!unit) return 'piece';
   const u = String(unit).trim().toLowerCase();
-  if (['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'किलो'].includes(u)) return 'kg';
-  if (['g', 'gm', 'gms', 'gram', 'grams', 'ग्रॅम', 'ग्राम'].includes(u)) return 'g';
+  if (['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'किलो', 'किग्र', 'कि.ग्रा', 'शेर'].includes(u)) return 'kg';
+  if (['g', 'gm', 'gms', 'gram', 'grams', 'ग्रॅम', 'ग्राम', 'ग्रा', 'पावशेर'].includes(u)) return 'g';
   if (['l', 'ltr', 'ltrs', 'litre', 'litres', 'liter', 'liters', 'लिटर', 'लीटर'].includes(u)) return 'litre';
-  if (['ml', 'mls', 'millilitre', 'मिली'].includes(u)) return 'ml';
-  if (['packet', 'packets', 'pkt', 'pkts', 'puda', 'pude', 'पुडा', 'पाकीट'].includes(u)) return 'packet';
-  if (['box', 'boxes', 'carton', 'cartons', 'बॉक्स', 'खोके', 'खोका'].includes(u)) return 'box';
+  if (['ml', 'mls', 'millilitre', 'मिली', 'मिलीलिटर'].includes(u)) return 'ml';
+  if (['packet', 'packets', 'pkt', 'pkts', 'puda', 'pude', 'pudi', 'पुडा', 'पुडे', 'पुडी', 'पाकीट', 'पाकिटे'].includes(u)) return 'packet';
+  if (['box', 'boxes', 'carton', 'cartons', 'बॉक्स', 'खोके', 'खोका', 'डबा', 'डबे'].includes(u)) return 'box';
   if (['dozen', 'dozens', 'डझन', 'दर्जन'].includes(u)) return 'dozen';
+  if (['bottle', 'bottles', 'btl', 'बाटली', 'बाटल्या'].includes(u)) return 'bottle';
+  if (['tola', 'tole', 'तोळा', 'तोळे'].includes(u)) return 'tola';
   if (['piece', 'pieces', 'pcs', 'pc', 'item', 'items', 'nag', 'पीस', 'नग'].includes(u)) return 'piece';
   return u;
 }
 
 /**
- * Normalizes item names (e.g. Cheeni -> Sugar, Sooji -> Rava)
+ * Normalizes item names using the comprehensive Marathi Kirana database
  */
 function normalizeItemName(rawName) {
   if (!rawName) return '';
+  const marathiMatched = canonicalizeMarathiItemName(rawName);
+  if (marathiMatched) return marathiMatched;
+
   const clean = rawName.trim().toLowerCase();
-  const map = {
-    cheeni: 'Sugar', sakhar: 'Sugar', sugar: 'Sugar', 'साखर': 'Sugar', 'चीनी': 'Sugar',
-    rawa: 'Rava', rava: 'Rava', sooji: 'Rava', suji: 'Rava', 'रवा': 'Rava', 'सुजी': 'Rava',
-    maida: 'Maida', 'मैदा': 'Maida',
-    tel: 'Oil', oil: 'Oil', 'तेल': 'Oil',
-    tandul: 'Rice', chawal: 'Rice', rice: 'Rice', 'तांदूळ': 'Rice', 'चावल': 'Rice',
-    atta: 'Atta', pith: 'Atta', 'आटा': 'Atta',
-    chaha: 'Tea', chai: 'Tea', tea: 'Tea', 'चहा': 'Tea', 'चाय': 'Tea',
-    doodh: 'Milk', dudh: 'Milk', milk: 'Milk', 'दूध': 'Milk',
-    saban: 'Soap', soap: 'Soap', 'साबण': 'Soap',
-    salt: 'Salt', meeth: 'Salt', 'मीठ': 'Salt', 'नमक': 'Salt',
-    maggi: 'Maggi', 'मॅगी': 'Maggi',
-    parle: 'Parle', parle_g: 'Parle-G',
-  };
-  if (map[clean]) return map[clean];
-  // Title Case
+  // Title Case fallback
   return clean.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -226,21 +260,15 @@ class GeminiProvider {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
-    const prompt = `You extract ALL bill items from a voice transcript of an Indian shopkeeper (English, Hindi, Marathi or Hinglish). The transcript contains MANY items, usually 2 to 50, often with no punctuation between them.
-Speech recognition may write units as kilo, kilogram, K G, ltr, litre, L, and price words as rs, Rs, rupees, rupay, rupaye, ₹.
-Item order may vary: '1 kg sugar 60 rs' or 'sugar 1 kg 60 rs'.
-Return ONLY valid JSON:
-{"items":[{"name":string,"quantity":number,"unit":string,"price":number}]}
-Rules:
-- Return EVERY item mentioned. Never stop after the first item.
-- One object per item, in the order spoken.
-- price = rate per unit in rupees (PRICE_MODE: "${priceMode}").
-- Convert number words (ek, do, teen, one, two, half, aadha, dedh, pachas).
-- Normalize names (rawa, rava, sooji -> Rava; cheeni -> Sugar).
-- If quantity is missing, use 1. If price is missing, use 0.
+    const preNormalized = normalizeMarathiTranscript(transcript);
 
-Preferred language hint: ${language}
-Transcript: "${transcript}"`;
+    const prompt = `${SYSTEM_PROMPT}
+
+Extract items from this counter billing transcript:
+Spoken Transcript: "${transcript}"
+Normalized Words: "${preNormalized}"
+Language: ${language}
+Price Mode: "${priceMode}"`;
 
     const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
     let lastError = null;

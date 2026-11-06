@@ -1,3 +1,8 @@
+const {
+  normalizeMarathiTranscript,
+  canonicalizeMarathiItemName,
+} = require('./marathiNormalizer');
+
 const NUMBER_WORDS_MAP = {
   zero: 0, shunya: 0, 'शून्य': 0,
   half: 0.5, aadha: 0.5, adha: 0.5, ardha: 0.5, 'आधा': 0.5, 'अर्धा': 0.5,
@@ -66,6 +71,8 @@ const NAME_MAP = {
 
 function normalizeName(name) {
   if (!name) return 'Item';
+  const marathi = canonicalizeMarathiItemName(name);
+  if (marathi) return marathi;
   const clean = name.trim().toLowerCase();
   if (NAME_MAP[clean]) return NAME_MAP[clean];
   return clean.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -91,7 +98,8 @@ function parseBillWithRegex(transcript, options = {}) {
   const priceMode = options.priceMode || 'per_unit';
   if (!transcript || !transcript.trim()) return [];
 
-  let text = normalizeNumberWords(transcript);
+  let text = normalizeMarathiTranscript(transcript);
+  text = normalizeNumberWords(text);
   text = text.replace(/[,;+\n]+/g, ' , ');
   text = text.replace(/\b(and|aur|ani|va|then|next|after that)\b/gi, ' , ');
 
