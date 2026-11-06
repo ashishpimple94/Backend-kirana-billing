@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { getLLMProvider, geminiTranscribe, GeminiProvider, OpenAIProvider } = require('../services/llmService');
 const { parseBillWithRegex } = require('../services/regexParser');
+const redis = require('../config/redis');
 
 const router = express.Router();
 
@@ -151,6 +152,15 @@ router.post('/parse-bill', async (req, res) => {
   const cleanText = transcript.trim();
   console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}"`);
 
+  // Fast-path: Check Redis cache for identical spoken order transcript
+  const cacheKey = `parse:${language}:${priceMode}:${Buffer.from(cleanText.toLowerCase()).toString('base64').slice(0, 60)}`;
+  const cachedResult = await redis.get(cacheKey);
+  if (cachedResult && Array.isArray(cachedResult.items) && cachedResult.items.length > 0) {
+    console.log(`[POST /api/parse-bill] Redis Cache HIT for "${cleanText}" (${cachedResult.items.length} items)`);
+    res.set('X-Cache', 'HIT');
+    return res.json(cachedResult);
+  }
+
   // Provider cascade: Gemini (primary) → OpenAI (automatic fallback) → Regex (offline)
   const textProviders = [
     { name: 'gemini', getInstance: () => new GeminiProvider() },
@@ -167,13 +177,18 @@ router.post('/parse-bill', async (req, res) => {
     try {
       const result = await provider.parseTranscript({ transcript: cleanText, language, priceMode });
       console.log(`[POST /api/parse-bill] ${name} extracted ${result.items?.length || 0} items.`);
-      return res.json({
+      const responseData = {
         success: true,
         transcript: cleanText,
         items: result.items || [],
         priceMode,
         provider: result.provider || name,
-      });
+      };
+      if (Array.isArray(result.items) && result.items.length > 0) {
+        redis.set(cacheKey, responseData, 86400).catch(() => {});
+      }
+      res.set('X-Cache', 'MISS');
+      return res.json(responseData);
     } catch (err) {
       console.warn(`[POST /api/parse-bill] ${name} failed, trying next:`, err.message);
     }

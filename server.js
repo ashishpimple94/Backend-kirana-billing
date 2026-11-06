@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+const redisCache = require('./config/redis');
 const voiceToBillRoute = require('./routes/voiceToBill');
 const billsRoute = require('./routes/bills');
 
@@ -42,6 +43,10 @@ app.get('/api/health', (req, res) => {
       status: mongoStates[stateCode] || 'unknown',
       connected: stateCode === 1,
       name: mongoose.connection.name || 'kirana_billing',
+    },
+    redis: {
+      configured: Boolean(process.env.REDIS_URL && process.env.REDIS_URL.trim()),
+      connected: redisCache.isAvailable(),
     },
     provider: process.env.LLM_PROVIDER || 'gemini',
     priceMode: process.env.PRICE_MODE || 'per_unit',

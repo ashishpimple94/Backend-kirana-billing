@@ -1,5 +1,6 @@
 const express = require('express');
 const Bill = require('../models/Bill');
+const redis = require('../config/redis');
 
 const router = express.Router();
 
@@ -79,6 +80,11 @@ router.post('/', async (req, res) => {
     const saved = await bill.save();
     console.log(`[POST /api/bills] Bill saved successfully in MongoDB: ${saved.billNumber} (Total: ₹${saved.grandTotal})`);
 
+    // Invalidate cached bill lists & prime item cache in Redis
+    redis.delByPattern('bills:list:*').catch(() => {});
+    if (saved._id) redis.set(`bills:item:${saved._id}`, { success: true, bill: saved }, 300).catch(() => {});
+    if (saved.billNumber) redis.set(`bills:item:${saved.billNumber}`, { success: true, bill: saved }, 300).catch(() => {});
+
     res.status(201).json({
       success: true,
       message: 'पावती डेटाबेसमध्ये यशस्वीरीत्या जतन केली!',
@@ -103,18 +109,29 @@ router.get('/', async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const skip = (page - 1) * limit;
 
+    const cacheKey = `bills:list:p${page}:l${limit}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      res.set('X-Cache', 'HIT');
+      return res.json(cached);
+    }
+
     const [bills, total] = await Promise.all([
       Bill.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
       Bill.countDocuments(),
     ]);
 
-    res.json({
+    const responseData = {
       success: true,
       total,
       page,
       limit,
       bills,
-    });
+    };
+
+    redis.set(cacheKey, responseData, 60).catch(() => {});
+    res.set('X-Cache', 'MISS');
+    res.json(responseData);
   } catch (err) {
     console.error('[GET /api/bills] Error fetching bills:', err);
     res.status(500).json({
@@ -131,6 +148,13 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const cacheKey = `bills:item:${id}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      res.set('X-Cache', 'HIT');
+      return res.json(cached);
+    }
+
     let bill = null;
     if (id.match(/^[0-9a-fA-F]{24}$/)) {
       bill = await Bill.findById(id);
@@ -143,7 +167,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bill not found' });
     }
 
-    res.json({ success: true, bill });
+    const responseData = { success: true, bill };
+    redis.set(cacheKey, responseData, 300).catch(() => {});
+    res.set('X-Cache', 'MISS');
+    res.json(responseData);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -167,6 +194,11 @@ router.delete('/:id', async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ error: 'Bill not found' });
     }
+
+    // Invalidate Redis caches
+    redis.delByPattern('bills:list:*').catch(() => {});
+    redis.del(`bills:item:${id}`).catch(() => {});
+    if (deleted.billNumber) redis.del(`bills:item:${deleted.billNumber}`).catch(() => {});
 
     console.log(`[DELETE /api/bills/:id] Bill deleted: ${deleted.billNumber}`);
     res.json({ success: true, message: 'पावती डेटाबेसमधून हटवली.' });
