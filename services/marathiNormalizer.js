@@ -1,6 +1,7 @@
 /**
- * Comprehensive Marathi Kirana Normalizer & Dictionary
+ * Comprehensive Marathi Kirana Normalizer & Multilingual Dictionary
  * Designed for extreme scalability across Maharashtra grocery dialects.
+ * Preserves the actual language spoken (Marathi, Hindi, or English) in the final bill!
  */
 
 // 1. Marathi/Devanagari Digits
@@ -83,84 +84,85 @@ const MARATHI_UNITS = [
   { pattern: /\b(तोळा|तोळे|tola)\b/gi, canonical: 'tola' },
 ];
 
-// 4. Comprehensive Kirana Item Canonical Names & Marathi Phonetics
+// 4. Comprehensive Multilingual Kirana Item Catalog
+// Maintains exact Marathi, Hindi, and English representations
 const MARATHI_KIRANA_ITEMS = [
   // Sweeteners & Staples
-  { canonical: 'Sugar', terms: ['साखर', 'साखरेची', 'साखरेचा', 'sakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'शक्कर'] },
-  { canonical: 'Jaggery', terms: ['गूळ', 'गुळ', 'गुळाची', 'गुळाचा', 'gul', 'gud', 'jaggery', 'कोल्हापुरी गूळ'] },
-  { canonical: 'Salt', terms: ['मीठ', 'मिठाचे', 'मिठाचा', 'meeth', 'mith', 'namak', 'salt', 'टाटा मीठ'] },
+  { canonical: 'Sugar', marathi: 'साखर', hindi: 'चीनी', terms: ['साखर', 'साखरेची', 'साखरेचा', 'sakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'शक्कर'] },
+  { canonical: 'Jaggery', marathi: 'गूळ', hindi: 'गुड़', terms: ['गूळ', 'गुळ', 'गुळाची', 'गुळाचा', 'gul', 'gud', 'jaggery', 'कोल्हापुरी गूळ'] },
+  { canonical: 'Salt', marathi: 'मीठ', hindi: 'नमक', terms: ['मीठ', 'मिठाचे', 'मिठाचा', 'meeth', 'mith', 'namak', 'salt', 'टाटा मीठ'] },
 
   // Grains & Flours
-  { canonical: 'Rice', terms: ['तांदूळ', 'तांदुळ', 'तांदळाचे', 'तांदळाची', 'tandul', 'tandool', 'chawal', 'rice', 'भात', 'कोलम', 'इंद्रायणी', 'बासमती', 'तुकडा'] },
-  { canonical: 'Wheat', terms: ['गहू', 'गव्हाचे', 'गव्हाचा', 'gahu', 'gehu', 'wheat', 'शरबती गहू', 'सीहोर गहू', 'लोकवन गहू'] },
-  { canonical: 'Atta', terms: ['आटा', 'पीठ', 'गव्हाचे पीठ', 'कणिक', 'atta', 'aata', 'peeth', 'pith', 'wheat flour', 'चक्की फ्रेश'] },
-  { canonical: 'Maida', terms: ['मैदा', 'मैद्याचे', 'maida', 'all purpose flour'] },
-  { canonical: 'Besan', terms: ['बेसन', 'चना पीठ', 'हरभरा पीठ', 'डाळीचे पीठ', 'besan', 'gram flour'] },
-  { canonical: 'Rava', terms: ['रवा', 'बारीक रवा', 'जाडा रवा', 'सुजी', 'rawa', 'rava', 'sooji', 'suji', 'semolina'] },
-  { canonical: 'Poha', terms: ['पोहे', 'पोहा', 'जाडे पोहे', 'पातळ पोहे', 'दगडी पोहे', 'pohe', 'poha'] },
-  { canonical: 'Jowar', terms: ['ज्वारी', 'ज्वारीचे पीठ', 'jowar', 'jowari', 'मालदांडी'] },
-  { canonical: 'Bajra', terms: ['बाजरी', 'बाजरीचे पीठ', 'bajri', 'bajra'] },
-  { canonical: 'Sabudana', terms: ['साबुदाणा', 'साबुदाना', 'sabudana', 'sago'] },
-  { canonical: 'Murmura', terms: ['चुरमुरे', 'मुरमुरा', 'कुरमुरे', 'churmure', 'murmura', 'kurmura'] },
+  { canonical: 'Rice', marathi: 'तांदूळ', hindi: 'चावल', terms: ['तांदूळ', 'तांदुळ', 'तांदळाचे', 'तांदळाची', 'tandul', 'tandool', 'chawal', 'rice', 'भात', 'कोलम', 'इंद्रायणी', 'बासमती', 'तुकडा'] },
+  { canonical: 'Wheat', marathi: 'गहू', hindi: 'गेहूं', terms: ['गहू', 'गव्हाचे', 'गव्हाचा', 'gahu', 'gehu', 'wheat', 'शरबती गहू', 'सीहोर गहू', 'लोकवन गहू'] },
+  { canonical: 'Atta', marathi: 'गव्हाचे पीठ', hindi: 'आटा', terms: ['आटा', 'पीठ', 'गव्हाचे पीठ', 'कणिक', 'atta', 'aata', 'peeth', 'pith', 'wheat flour', 'चक्की फ्रेश'] },
+  { canonical: 'Maida', marathi: 'मैदा', hindi: 'मैदा', terms: ['मैदा', 'मैद्याचे', 'maida', 'all purpose flour'] },
+  { canonical: 'Besan', marathi: 'बेसन', hindi: 'बेसन', terms: ['बेसन', 'चना पीठ', 'हरभरा पीठ', 'डाळीचे पीठ', 'besan', 'gram flour'] },
+  { canonical: 'Rava', marathi: 'रवा', hindi: 'सूजी', terms: ['रवा', 'बारीक रवा', 'जाडा रवा', 'सुजी', 'सूजी', 'rawa', 'rava', 'sooji', 'suji', 'semolina'] },
+  { canonical: 'Poha', marathi: 'पोहे', hindi: 'पोहा', terms: ['पोहे', 'पोहा', 'जाडे पोहे', 'पातळ पोहे', 'दगडी पोहे', 'pohe', 'poha'] },
+  { canonical: 'Jowar', marathi: 'ज्वारी', hindi: 'ज्वार', terms: ['ज्वारी', 'ज्वारीचे पीठ', 'jowar', 'jowari', 'मालदांडी'] },
+  { canonical: 'Bajra', marathi: 'बाजरी', hindi: 'बाजरा', terms: ['बाजरी', 'बाजरीचे पीठ', 'bajri', 'bajra'] },
+  { canonical: 'Sabudana', marathi: 'साबुदाणा', hindi: 'साबूदाना', terms: ['साबुदाणा', 'साबुदाना', 'sabudana', 'sago'] },
+  { canonical: 'Murmura', marathi: 'चुरमुरे', hindi: 'मुरमुरा', terms: ['चुरमुरे', 'मुरमुरा', 'कुरमुरे', 'churmure', 'murmura', 'kurmura'] },
 
   // Dals & Pulses
-  { canonical: 'Toor Dal', terms: ['तूर डाळ', 'तुरीची डाळ', 'तूरडाळ', 'tur dal', 'toor dal', 'arhar dal'] },
-  { canonical: 'Chana Dal', terms: ['चना डाळ', 'हरभरा डाळ', 'chana dal', 'harbhara dal'] },
-  { canonical: 'Moong Dal', terms: ['मूग डाळ', 'मुगाची डाळ', 'moong dal', 'mung dal', 'हिरवे मूग'] },
-  { canonical: 'Urad Dal', terms: ['उडीद डाळ', 'उडदाची डाळ', 'urad dal', 'udid dal'] },
-  { canonical: 'Masoor Dal', terms: ['मसूर डाळ', 'मसुराची डाळ', 'masoor dal', 'अख्खा मसूर'] },
-  { canonical: 'Chole', terms: ['काबुली चणे', 'काबुली चना', 'छोले', 'chole', 'kabuli chana'] },
-  { canonical: 'Matki', terms: ['मटकी', 'मोड आलेली मटकी', 'matki', 'moth beans'] },
-  { canonical: 'Rajma', terms: ['राजमा', 'rajma', 'red rajma'] },
-  { canonical: 'Vatana', terms: ['वाटाणा', 'सफेद वाटाणा', 'हिरवा वाटाणा', 'vatana', 'matar'] },
+  { canonical: 'Toor Dal', marathi: 'तूर डाळ', hindi: 'अरहर दाल', terms: ['तूर डाळ', 'तुरीची डाळ', 'तूरडाळ', 'tur dal', 'toor dal', 'arhar dal'] },
+  { canonical: 'Chana Dal', marathi: 'चना डाळ', hindi: 'चना दाल', terms: ['चना डाळ', 'हरभरा डाळ', 'chana dal', 'harbhara dal'] },
+  { canonical: 'Moong Dal', marathi: 'मूग डाळ', hindi: 'मूंग दाल', terms: ['मूग डाळ', 'मुगाची डाळ', 'moong dal', 'mung dal', 'हिरवे मूग'] },
+  { canonical: 'Urad Dal', marathi: 'उडीद डाळ', hindi: 'उड़द दाल', terms: ['उडीद डाळ', 'उडदाची डाळ', 'urad dal', 'udid dal'] },
+  { canonical: 'Masoor Dal', marathi: 'मसूर डाळ', hindi: 'मसूर दाल', terms: ['मसूर डाळ', 'मसुराची डाळ', 'masoor dal', 'अख्खा मसूर'] },
+  { canonical: 'Chole', marathi: 'काबुली चणे', hindi: 'छोले', terms: ['काबुली चणे', 'काबुली चना', 'छोले', 'chole', 'kabuli chana'] },
+  { canonical: 'Matki', marathi: 'मटकी', hindi: 'मटकी', terms: ['मटकी', 'मोड आलेली मटकी', 'matki', 'moth beans'] },
+  { canonical: 'Rajma', marathi: 'राजमा', hindi: 'राजमा', terms: ['राजमा', 'rajma', 'red rajma'] },
+  { canonical: 'Vatana', marathi: 'वाटाणा', hindi: 'मटर', terms: ['वाटाणा', 'सफेद वाटाणा', 'हिरवा वाटाणा', 'vatana', 'matar'] },
 
   // Cooking Oils & Ghee
-  { canonical: 'Cooking Oil', terms: ['गोडेतेल', 'तेल', 'तेलाची', 'तेलाचे', 'tel', 'oil', 'cooking oil'] },
-  { canonical: 'Groundnut Oil', terms: ['शेंगदाणा तेल', 'shengdana tel', 'groundnut oil', 'peanut oil'] },
-  { canonical: 'Sunflower Oil', terms: ['सूर्यफूल तेल', 'sunflower oil', 'फॉर्च्यून तेल', 'फॉर्च्यून'] },
-  { canonical: 'Gemini Oil', terms: ['जेमिनी तेल', 'जेमिनी', 'gemini oil', 'gemini'] },
-  { canonical: 'Mustard Oil', terms: ['मोहरी तेल', 'राई तेल', 'mustard oil', 'sarson oil'] },
-  { canonical: 'Coconut Oil', terms: ['खोबरेल तेल', 'पॅराशूट', 'पॅराशूट तेल', 'khobrel tel', 'coconut oil', 'parachute'] },
-  { canonical: 'Ghee', terms: ['तूप', 'तूपाची', 'तूपाचा', 'साजूक तूप', 'गायीचे तूप', 'tup', 'toop', 'ghee', 'amul ghee'] },
+  { canonical: 'Cooking Oil', marathi: 'गोडेतेल', hindi: 'तेल', terms: ['गोडेतेल', 'तेल', 'तेलाची', 'तेलाचे', 'tel', 'oil', 'cooking oil'] },
+  { canonical: 'Groundnut Oil', marathi: 'शेंगदाणा तेल', hindi: 'मूंगफली तेल', terms: ['शेंगदाणा तेल', 'shengdana tel', 'groundnut oil', 'peanut oil'] },
+  { canonical: 'Sunflower Oil', marathi: 'सूर्यफूल तेल', hindi: 'सूरजमुखी तेल', terms: ['सूर्यफूल तेल', 'sunflower oil', 'फॉर्च्यून तेल', 'फॉर्च्यून'] },
+  { canonical: 'Gemini Oil', marathi: 'जेमिनी तेल', hindi: 'जेमिनी तेल', terms: ['जेमिनी तेल', 'जेमिनी', 'gemini oil', 'gemini'] },
+  { canonical: 'Mustard Oil', marathi: 'मोहरी तेल', hindi: 'सरसों तेल', terms: ['मोहरी तेल', 'राई तेल', 'mustard oil', 'sarson oil'] },
+  { canonical: 'Coconut Oil', marathi: 'खोबरेल तेल', hindi: 'नारियल तेल', terms: ['खोबरेल तेल', 'पॅराशूट', 'पॅराशूट तेल', 'khobrel tel', 'coconut oil', 'parachute'] },
+  { canonical: 'Ghee', marathi: 'तूप', hindi: 'घी', terms: ['तूप', 'तूपाची', 'तूपाचा', 'साजूक तूप', 'गायीचे तूप', 'tup', 'toop', 'ghee', 'amul ghee'] },
 
   // Spices & Condiments
-  { canonical: 'Turmeric', terms: ['हळद', 'हळदी', 'हळदीची', 'halad', 'haldi', 'turmeric', 'हळद पावडर'] },
-  { canonical: 'Red Chilli Powder', terms: ['लाल तिखट', 'मिरची पावडर', 'तिखट', 'मिरची', 'lal tikhat', 'mirchi powder', 'red chilli powder'] },
-  { canonical: 'Jeera', terms: ['जिरे', 'जिरं', 'जीरा', 'jeera', 'jira', 'cumin'] },
-  { canonical: 'Mohari', terms: ['मोहरी', 'राई', 'mohari', 'rai', 'mustard seeds'] },
-  { canonical: 'Dhane', terms: ['धने', 'धने पावडर', 'धनिया', 'dhane', 'dhaniya', 'coriander seeds'] },
-  { canonical: 'Garam Masala', terms: ['गरम मसाला', 'सुहाना मसाला', 'एव्हरेस्ट मसाला', 'garam masala', 'masala'] },
-  { canonical: 'Hing', terms: ['हिंग', 'hing', 'asafoetida'] },
-  { canonical: 'Elaichi', terms: ['वेलची', 'विलायची', 'इलायची', 'velchi', 'elaichi', 'cardamom'] },
-  { canonical: 'Lavang', terms: ['लवंग', 'लावंग', 'lavang', 'laung', 'clove'] },
-  { canonical: 'Dalchini', terms: ['दालचिनी', 'dalchini', 'cinnamon'] },
-  { canonical: 'Methi Seeds', terms: ['मेथी दाणे', 'मेथी', 'methi seeds', 'fenugreek'] },
-  { canonical: 'Dry Coconut', terms: ['खोबरं', 'सुके खोबरे', 'खोबरे', 'khobare', 'dry coconut'] },
+  { canonical: 'Turmeric', marathi: 'हळद', hindi: 'हल्दी', terms: ['हळद', 'हळदी', 'हळदीची', 'halad', 'haldi', 'turmeric', 'हळद पावडर'] },
+  { canonical: 'Red Chilli Powder', marathi: 'लाल तिखट', hindi: 'लाल मिर्च', terms: ['लाल तिखट', 'मिरची पावडर', 'तिखट', 'मिरची', 'lal tikhat', 'mirchi powder', 'red chilli powder'] },
+  { canonical: 'Jeera', marathi: 'जिरे', hindi: 'जीरा', terms: ['जिरे', 'जिरं', 'जीरा', 'jeera', 'jira', 'cumin'] },
+  { canonical: 'Mohari', marathi: 'मोहरी', hindi: 'राई', terms: ['मोहरी', 'राई', 'mohari', 'rai', 'mustard seeds'] },
+  { canonical: 'Dhane', marathi: 'धने', hindi: 'धनिया', terms: ['धने', 'धने पावडर', 'धनिया', 'dhane', 'dhaniya', 'coriander seeds'] },
+  { canonical: 'Garam Masala', marathi: 'गरम मसाला', hindi: 'गरम मसाला', terms: ['गरम मसाला', 'सुहाना मसाला', 'एव्हरेस्ट मसाला', 'garam masala', 'masala'] },
+  { canonical: 'Hing', marathi: 'हिंग', hindi: 'हींग', terms: ['हिंग', 'hing', 'asafoetida'] },
+  { canonical: 'Elaichi', marathi: 'वेलची', hindi: 'इलायची', terms: ['वेलची', 'विलायची', 'इलायची', 'velchi', 'elaichi', 'cardamom'] },
+  { canonical: 'Lavang', marathi: 'लवंग', hindi: 'लौंग', terms: ['लवंग', 'लावंग', 'lavang', 'laung', 'clove'] },
+  { canonical: 'Dalchini', marathi: 'दालचिनी', hindi: 'दालचीनी', terms: ['दालचिनी', 'dalchini', 'cinnamon'] },
+  { canonical: 'Methi Seeds', marathi: 'मेथी दाणे', hindi: 'मेथी दाना', terms: ['मेथी दाणे', 'मेथी', 'methi seeds', 'fenugreek'] },
+  { canonical: 'Dry Coconut', marathi: 'खोबरं', hindi: 'सूखा नारियल', terms: ['खोबरं', 'सुके खोबरे', 'खोबरे', 'khobare', 'dry coconut'] },
 
   // Dairy & Daily Essentials
-  { canonical: 'Milk', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Tea', terms: ['चहा', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा'] },
-  { canonical: 'Coffee', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
-  { canonical: 'Peanuts', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'dane', 'peanuts', 'groundnuts'] },
-  { canonical: 'Cashews', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
-  { canonical: 'Almonds', terms: ['बदाम', 'badam', 'almond'] },
-  { canonical: 'Kishmish', terms: ['मनुका', 'किशमिश', 'manuka', 'kishmish', 'raisins'] },
+  { canonical: 'Milk', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
+  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा'] },
+  { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
+  { canonical: 'Peanuts', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'dane', 'peanuts', 'groundnuts'] },
+  { canonical: 'Cashews', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
+  { canonical: 'Almonds', marathi: 'बदाम', hindi: 'बादाम', terms: ['बदाम', 'badam', 'almond'] },
+  { canonical: 'Kishmish', marathi: 'मनुका', hindi: 'किशमिश', terms: ['मनुका', 'किशमिश', 'manuka', 'kishmish', 'raisins'] },
 
   // Household & Personal Care
-  { canonical: 'Soap', terms: ['साबण', 'अंगाचा साबण', 'कपड्यांचा साबण', 'saban', 'soap', 'लाईफबॉय', 'लक्स', 'डेटॉल', 'संतूर'] },
-  { canonical: 'Detergent Powder', terms: ['निरमा', 'सर्फ', 'डिटर्जंट पावडर', 'टाईड', 'एरिअल', 'detergent', 'surf', 'nirma'] },
-  { canonical: 'Dishwash Bar', terms: ['भांड्यांचा साबण', 'विम बार', 'विम', 'भांडी घासण्याचा साबण', 'vim bar', 'dishwash'] },
-  { canonical: 'Matchbox', terms: ['काडेपेटी', 'माचिस', 'काडीपेटी', 'kadepeti', 'machis', 'matchbox'] },
-  { canonical: 'Agarbatti', terms: ['अगरबत्ती', 'अगरबत्त्या', 'धूप', 'agarbatti', 'incense'] },
-  { canonical: 'Toothpaste', terms: ['कोलगेट', 'पेस्ट', 'टूथपेस्ट', 'colgate', 'toothpaste', 'क्लोजअप'] },
-  { canonical: 'Biscuits', terms: ['बिस्कीट', 'बिस्किट', 'पारले जी', 'गुड डे', 'मारी', 'क्रॅकजॅक', 'biscuit', 'parle g', 'good day'] },
-  { canonical: 'Maggi', terms: ['मॅगी', 'शेवया', 'नूडल्स', 'maggi', 'noodles'] },
+  { canonical: 'Soap', marathi: 'साबण', hindi: 'साबुन', terms: ['साबण', 'अंगाचा साबण', 'कपड्यांचा साबण', 'saban', 'soap', 'लाईफबॉय', 'लक्स', 'डेटॉल', 'संतूर'] },
+  { canonical: 'Detergent Powder', marathi: 'डिटर्जंट पावडर', hindi: 'सर्फ', terms: ['निरमा', 'सर्फ', 'डिटर्जंट पावडर', 'टाईड', 'एरिअल', 'detergent', 'surf', 'nirma'] },
+  { canonical: 'Dishwash Bar', marathi: 'भांड्यांचा साबण', hindi: 'बर्तन साबुन', terms: ['भांड्यांचा साबण', 'विम बार', 'विम', 'भांडी घासण्याचा साबण', 'vim bar', 'dishwash'] },
+  { canonical: 'Matchbox', marathi: 'काडेपेटी', hindi: 'माचिस', terms: ['काडेपेटी', 'माचिस', 'काडीपेटी', 'kadepeti', 'machis', 'matchbox'] },
+  { canonical: 'Agarbatti', marathi: 'अगरबत्ती', hindi: 'अगरबत्ती', terms: ['अगरबत्ती', 'अगरबत्त्या', 'धूप', 'agarbatti', 'incense'] },
+  { canonical: 'Toothpaste', marathi: 'टूथपेस्ट', hindi: 'टूथपेस्ट', terms: ['कोलगेट', 'पेस्ट', 'टूथपेस्ट', 'colgate', 'toothpaste', 'क्लोजअप'] },
+  { canonical: 'Biscuits', marathi: 'बिस्कीट', hindi: 'बिस्कुट', terms: ['बिस्कीट', 'बिस्किट', 'पारले जी', 'गुड डे', 'मारी', 'क्रॅकजॅक', 'biscuit', 'parle g', 'good day'] },
+  { canonical: 'Maggi', marathi: 'मॅगी', hindi: 'मैगी', terms: ['मॅगी', 'शेवया', 'नूडल्स', 'maggi', 'noodles'] },
 
   // Fresh Produce
-  { canonical: 'Onion', terms: ['कांदे', 'कांदा', 'kande', 'kanda', 'onion'] },
-  { canonical: 'Potato', terms: ['बटाटे', 'बटाटा', 'batate', 'batata', 'potato', 'aloo'] },
-  { canonical: 'Garlic', terms: ['लसूण', 'लसून', 'lasun', 'garlic'] },
-  { canonical: 'Ginger', terms: ['आले', 'अद्रक', 'ale', 'adrak', 'ginger'] },
+  { canonical: 'Onion', marathi: 'कांदे', hindi: 'प्याज़', terms: ['कांदे', 'कांदा', 'kande', 'kanda', 'onion'] },
+  { canonical: 'Potato', marathi: 'बटाटे', hindi: 'आलू', terms: ['बटाटे', 'बटाटा', 'batate', 'batata', 'potato', 'aloo'] },
+  { canonical: 'Garlic', marathi: 'लसूण', hindi: 'लहसुन', terms: ['लसूण', 'लसून', 'lasun', 'garlic'] },
+  { canonical: 'Ginger', marathi: 'आले', hindi: 'अदरक', terms: ['आले', 'अद्रक', 'ale', 'adrak', 'ginger'] },
 ];
 
 /**
@@ -201,27 +203,44 @@ function normalizeMarathiTranscript(text) {
 }
 
 /**
- * Canonicalizes an extracted item name using Marathi Kirana dictionary
+ * Canonicalizes an extracted item name while strictly preserving the spoken language.
+ * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे)
+ * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल)
+ * If spoken in English -> returns English name (Sugar, Rice)
  */
-function canonicalizeMarathiItemName(name) {
+function canonicalizeMarathiItemName(name, language = 'mr-IN') {
   if (!name || typeof name !== 'string') return '';
   const clean = name.trim().toLowerCase();
 
-  // Strip common Marathi grammatical post-positions (साखरेची -> साखर, तेलाचे -> तेल)
+  const isDevanagari = /[\u0900-\u097F]/.test(name);
+  const isPureEnglish = /^[A-Za-z0-9\s\-]+$/.test(clean);
+  const langLower = String(language || '').toLowerCase();
+  const isHindi = langLower.startsWith('hi');
+  const isMarathi = langLower.startsWith('mr') || (isDevanagari && !isHindi);
+
+  // Strip common grammatical post-positions (साखरेची -> साखर, तेलाचे -> तेल)
   const stripped = clean
-    .replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले)$/gi, '')
+    .replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '')
     .trim();
 
   for (const entry of MARATHI_KIRANA_ITEMS) {
     for (const term of entry.terms) {
       const termLower = term.toLowerCase();
       if (clean === termLower || stripped === termLower || clean.includes(termLower)) {
+        if (isPureEnglish && !isDevanagari) return entry.canonical;
+        if (isHindi) return entry.hindi || entry.canonical;
+        if (isMarathi) return entry.marathi || entry.canonical;
         return entry.canonical;
       }
     }
   }
 
-  // Fallback: Title case original
+  // Fallback: If in Devanagari, strip suffixes and return user's actual spoken word
+  if (isDevanagari) {
+    return name.trim().replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+  }
+
+  // English fallback: Title case
   return clean.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

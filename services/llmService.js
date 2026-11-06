@@ -9,14 +9,21 @@ const {
   normalizeMarathiTranscript,
 } = require('./marathiNormalizer');
 
-const SYSTEM_PROMPT = `You are an expert bilingual Kirana Billing Assistant specialized in Indian dialects (especially Marathi, Hindi, English, and Hinglish).
+const SYSTEM_PROMPT = `You are an expert bilingual Kirana Billing Assistant specialized in Indian dialects (Marathi, Hindi, English, and Hinglish).
 Listen to the shopkeeper speaking fast counter billing items (often 2 to 50 items spoken continuously).
-Extract EVERY single item mentioned. Never stop early.
+Extract EVERY single item mentioned with high accuracy. Never stop early.
 
-CRITICAL MARATHI KIRANA RULES:
-1. MARATHI FRACTIONS & WEIGHTS:
-- "पाव" (paav / pav) = 0.25 (e.g. "पाव किलो साखर" -> 0.25 kg Sugar, or 250 g)
-- "अर्धा" / "अर्धी" (ardha / ardhi) = 0.5 (e.g. "अर्धा किलो तेल" -> 0.5 litre Oil, or 500 ml)
+CRITICAL RULES:
+1. SPOKEN LANGUAGE PRESERVATION (MANDATORY):
+- Return the item name in the EXACT language spoken by the customer/shopkeeper!
+- If spoken in MARATHI ("साखर", "तूर डाळ", "पोहे", "गोडेतेल", "गूळ", "रवा", "चहा", "साबण", "कांदे", "बटाटे") -> Return clean Marathi names: "साखर", "तूर डाळ", "पोहे", "गोडेतेल", "गूळ", "रवा", "चहा", "साबण", "कांदे", "बटाटे"
+- If spoken in HINDI ("चीनी", "अरहर दाल", "चावल", "तेल", "नमक") -> Return Hindi names: "चीनी", "अरहर दाल", "चावल", "तेल", "नमक"
+- If spoken in ENGLISH ("Sugar", "Rice", "Tea", "Soap") -> Return English names: "Sugar", "Rice", "Tea", "Soap"
+- DO NOT translate Marathi words to English. Keep the bill in the actual spoken language.
+
+2. MARATHI FRACTIONS & WEIGHTS:
+- "पाव" (paav / pav) = 0.25 (e.g. "पाव किलो साखर" -> 0.25 kg साखर, or 250 g)
+- "अर्धा" / "अर्धी" (ardha / ardhi) = 0.5 (e.g. "अर्धा किलो तेल" -> 0.5 litre तेल, or 500 ml)
 - "पाऊण" (paun) = 0.75
 - "सव्वा" (savva) = 1.25
 - "दीड" (deed / dedh) = 1.5
@@ -25,34 +32,16 @@ CRITICAL MARATHI KIRANA RULES:
 - "पावशेर" = 0.25 kg, "अर्धा शेर" = 0.5 kg, "शेर" = 1 kg
 - "डझन" (dozen) = 12 piece, "नग" = piece, "पुडा" / "पाकीट" = packet
 
-2. MARATHI NUMBERS:
+3. MARATHI NUMBERS:
 एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90, शंभर=100, दोनशे=200, पाचशे=500.
 
-3. MARATHI KIRANA VOCABULARY & SUFFIXES:
-- "साखरेची" / "साखर" / "sakhar" -> Sugar
-- "तुरीची डाळ" / "तूर डाळ" -> Toor Dal
-- "चना डाळ" / "हरभरा डाळ" -> Chana Dal
-- "गोडेतेल" / "शेंगदाणा तेल" / "तेल" -> Cooking Oil
-- "गव्हाचे पीठ" / "कणिक" / "आटा" -> Atta
-- "बारीक रवा" / "जाडा रवा" / "रवा" -> Rava
-- "पोहे" / "जाडे पोहे" / "पातळ पोहे" -> Poha
-- "गूळ" / "गुळ" -> Jaggery
-- "तांदूळ" / "भात" / "कोलम" / "इंद्रायणी" -> Rice
-- "मीठ" / "टाटा मीठ" -> Salt
-- "हळद" / "हळदी" -> Turmeric
-- "जिरे" / "जिरं" -> Cumin
-- "मोहरी" / "राई" -> Mustard
-- "लाल तिखट" / "मिरची पावडर" -> Red Chilli Powder
-- "साबण" / "लाईफबॉय" / "निरमा" / "सर्फ" -> Soap
-- "काडेपेटी" / "माचिस" -> Matchbox
-- "अगरबत्ती" -> Agarbatti
-- "शेंगदाणे" / "दाणे" -> Peanuts
-- "दूध" -> Milk
-- "चहा" / "चाय" -> Tea
-
-4. PRICING & QUANTITY:
-- If speaker says "50 रुपयांची साखर" -> item: "Sugar", quantity: 1, unit: "packet", price: 50.
-- If speaker says "साखर 40 रुपये किलो 2 किलो" -> item: "Sugar", quantity: 2, unit: "kg", price: 40.
+4. EXACT NUMBER & PRICING ALIGNMENT:
+- Extract the exact numbers spoken.
+- "दोन किलो साखर चाळीस रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 40
+- "अर्धा किलो पोहे तीस रुपये" -> name: "पोहे", quantity: 0.5, unit: "kg", price: 30
+- "पाव किलो चहा पन्नास रुपये" -> name: "चहा", quantity: 0.25, unit: "kg", price: 50
+- "दीड लिटर तेल दोनशे रुपये" -> name: "तेल", quantity: 1.5, unit: "litre", price: 200
+- "50 रुपयांची साखर" -> name: "साखर", quantity: 1, unit: "packet", price: 50
 - If quantity is missing use 1. If price is missing use 0.
 
 Return ONLY JSON:
@@ -102,28 +91,31 @@ function canonicalizeUnit(unit) {
 
 /**
  * Normalizes item names using the comprehensive Marathi Kirana database
+ * Preserves the actual language spoken (Marathi, Hindi, or English).
  */
-function normalizeItemName(rawName) {
+function normalizeItemName(rawName, language = 'mr-IN') {
   if (!rawName) return '';
-  const marathiMatched = canonicalizeMarathiItemName(rawName);
-  if (marathiMatched) return marathiMatched;
+  const matched = canonicalizeMarathiItemName(rawName, language);
+  if (matched) return matched;
 
-  const clean = rawName.trim().toLowerCase();
-  // Title Case fallback
-  return clean.replace(/\b\w/g, (c) => c.toUpperCase());
+  const clean = rawName.trim();
+  if (/[\u0900-\u097F]/.test(clean)) {
+    return clean.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+  }
+  return clean.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /**
  * Validates parsed items:
  * name not empty, quantity > 0, price >= 0
  */
-function sanitizeItems(rawItems, priceMode = 'per_unit') {
+function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN') {
   if (!Array.isArray(rawItems)) return [];
   const valid = [];
 
   for (const item of rawItems) {
     if (!item) continue;
-    const name = normalizeItemName(String(item.name || item.item || '').trim());
+    const name = normalizeItemName(String(item.name || item.item || '').trim(), language);
     if (!name) continue;
 
     let quantity = parseFloat(item.quantity || item.qty);
@@ -171,7 +163,7 @@ class GeminiProvider {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY;
   }
 
-  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'en-IN', priceMode = 'per_unit' }) {
+  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'mr-IN', priceMode = 'per_unit' }) {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
@@ -239,7 +231,7 @@ class GeminiProvider {
         const parsed = JSON.parse(cleanJson);
 
         const transcript = String(parsed.transcript || '').trim();
-        const items = sanitizeItems(parsed.items, priceMode);
+        const items = sanitizeItems(parsed.items, priceMode, language);
 
         return {
           transcript,
@@ -310,7 +302,7 @@ Price Mode: "${priceMode}"`;
         const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
         const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
-        const items = sanitizeItems(rawItems, priceMode);
+        const items = sanitizeItems(rawItems, priceMode, language);
 
         return {
           transcript,
@@ -391,7 +383,7 @@ class OpenAIProvider {
     const chatData = await chatRes.json();
     const content = chatData.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(content);
-    const items = sanitizeItems(parsed.items, priceMode);
+    const items = sanitizeItems(parsed.items, priceMode, language);
 
     return {
       transcript: parsed.transcript || transcript,
@@ -509,7 +501,7 @@ Transcript: "${transcript}"`;
       const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
       const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
-      const items = sanitizeItems(rawItems, priceMode);
+      const items = sanitizeItems(rawItems, priceMode, language);
       return { transcript, items, provider: 'qwen', model: this.model };
     } finally {
       clearTimeout(timeout);
