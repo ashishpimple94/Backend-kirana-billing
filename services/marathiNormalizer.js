@@ -37,19 +37,19 @@ function makeUnicodeRegex(patternStr, flags = 'gi') {
 // 2. Comprehensive Marathi & Indian Number Words (Hundreds, Compounds, Tens, Units, Fractions)
 const HUNDREDS_MAP = {
   // Marathi Devanagari & Phonetic Hundreds
-  'एकशे': 100, 'ekshe': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
-  'दोनशे': 200, 'donshe': 200, 'do sau': 200, 'two hundred': 200,
-  'तीनशे': 300, 'teenshe': 300, 'teen sau': 300, 'three hundred': 300,
-  'चारशे': 400, 'charshe': 400, 'char sau': 400, 'four hundred': 400,
-  'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'paanch sau': 500, 'five hundred': 500,
-  'सहाशे': 600, 'sahashe': 600, 'chha sau': 600, 'six hundred': 600,
-  'सातशे': 700, 'saatshe': 700, 'saat sau': 700, 'seven hundred': 700,
-  'आठशे': 800, 'aathshe': 800, 'aath sau': 800, 'eight hundred': 800,
-  'नऊशे': 900, 'naushe': 900, 'nau sau': 900, 'nine hundred': 900,
-  'हजार': 1000, 'hazar': 1000, 'ek hazar': 1000, 'one thousand': 1000,
+  'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
+  'दोनशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'do sau': 200, 'two hundred': 200,
+  'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'teen sau': 300, 'three hundred': 300,
+  'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'char sau': 400, 'four hundred': 400,
+  'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'pachashe': 500, 'paachashe': 500, 'pachashey': 500, 'pachshey': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
+  'सहाशे': 600, 'sahashe': 600, 'sahashey': 600, 'chha sau': 600, 'six hundred': 600,
+  'सातशे': 700, 'saatshe': 700, 'saatashe': 700, 'saatshey': 700, 'saat sau': 700, 'seven hundred': 700,
+  'आठशे': 800, 'aathshe': 800, 'aathashe': 800, 'aathshey': 800, 'aath sau': 800, 'eight hundred': 800,
+  'नऊशे': 900, 'naushe': 900, 'nauashe': 900, 'naushey': 900, 'nau sau': 900, 'nine hundred': 900,
+  'हजार': 1000, 'hazar': 1000, 'hazaar': 1000, 'ek hazar': 1000, 'one thousand': 1000,
 
   // Colloquial half-hundreds
-  'साडेपाचशे': 550, 'sade pachshe': 550, 'sade paachshe': 550,
+  'साडेपाचशे': 550, 'sade pachshe': 550, 'sade paachshe': 550, 'sade pachashe': 550, 'sade paachashe': 550, 'pachashe pannas': 550, 'pachshe pannas': 550,
   'साडेचारशे': 450, 'sade charshe': 450,
   'साडेतीनशे': 350, 'sade teenshe': 350,
   'अडीचशे': 250, 'adeechshe': 250, 'dhai sau': 250,
@@ -320,8 +320,8 @@ function normalizeMarathiTranscript(text) {
     s = s.replace(pattern, ` ${canonical} `);
   }
 
-  // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs) (Unicode-safe)
-  const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|rs|rupees|inr|₹|\\/-');
+  // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs, rupaye, ruapaye, etc.) (Unicode-safe)
+  const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|\\/-');
   s = s.replace(priceRegex, ' rs ');
 
   // 7. Clean multiple spaces and comma separators
