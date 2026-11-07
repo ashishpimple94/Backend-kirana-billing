@@ -38,7 +38,7 @@ function makeUnicodeRegex(patternStr, flags = 'gi') {
 const HUNDREDS_MAP = {
   // Marathi Devanagari & Phonetic Hundreds
   'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
-  'दोनशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'do sau': 200, 'two hundred': 200,
+  'दोनशे': 200, 'दोंशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'do sau': 200, 'two hundred': 200,
   'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'teen sau': 300, 'three hundred': 300,
   'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'char sau': 400, 'four hundred': 400,
   'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'pachashe': 500, 'paachashe': 500, 'pachashey': 500, 'pachshey': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
@@ -47,6 +47,10 @@ const HUNDREDS_MAP = {
   'आठशे': 800, 'aathshe': 800, 'aathashe': 800, 'aathshey': 800, 'aath sau': 800, 'eight hundred': 800,
   'नऊशे': 900, 'naushe': 900, 'nauashe': 900, 'naushey': 900, 'nau sau': 900, 'nine hundred': 900,
   'हजार': 1000, 'hazar': 1000, 'hazaar': 1000, 'ek hazar': 1000, 'one thousand': 1000,
+
+  // Direct Hundred-Tens Compounds
+  'एकशेचाळीस': 140, 'एकशेचालीस': 140, 'एकशेच्चाइश': 140, 'एकशेचायच': 140, 'एकशेचाईस': 140,
+  'दोनशेपन्नास': 250, 'दोंशेपन्नस': 250, 'दोनशे पन्नास': 250, 'दोंशे पन्नास': 250, 'donshepannas': 250, 'donshe pannas': 250,
 
   // Colloquial half-hundreds
   'साडेपाचशे': 550, 'sade pachshe': 550, 'sade paachshe': 550, 'sade pachashe': 550, 'sade paachashe': 550, 'pachashe pannas': 550, 'pachshe pannas': 550,
@@ -69,7 +73,8 @@ const UNITS_AND_TENS_MAP = {
 
   // 80s
   'एक्याऐंशी': 81, 'ब्याऐंशी': 82, 'त्र्याऐंशी': 83, 'चौऱ्याऐंशी': 84,
-  'पंच्याऐंशी': 85, 'शहाऐंशी': 86, 'सत्याऐंशी': 87, 'अठ्ठ्याऐंशी': 88,
+  'पंच्याऐंशी': 85, 'पंचाइश': 85, 'पंचाईश': 85, 'पंचाशी': 85, 'पंच्यांशी': 85, 'पंचाऐंशी': 85, 'panchaishi': 85, 'panchashi': 85, 'pachasi': 85, 'पचासी': 85,
+  'शहाऐंशी': 86, 'सत्याऐंशी': 87, 'अठ्ठ्याऐंशी': 88,
   'एकोणनव्वद': 89, 'nawasi': 89, 'ekonnavvad': 89,
   'aishi': 80, 'ayshi': 80, 'assi': 80, 'ऐंशी': 80, 'अस्सी': 80, 'eighty': 80,
 
@@ -196,7 +201,7 @@ function parseMarathiSpokenNumbers(text) {
 // 3. Marathi Unit Normalization (Unicode-safe)
 const MARATHI_UNITS = [
   { pattern: makeUnicodeRegex('किलो|किग्र|कि\\.ग्रा|kilo|kilos|kg|kgs|kilogram'), canonical: 'kg' },
-  { pattern: makeUnicodeRegex('ग्रॅम|ग्राम|ग्रा|gram|grams|gm|gms|g'), canonical: 'g' },
+  { pattern: makeUnicodeRegex('ग्रॅम|ग्राम|ग्रा|गरयम|गराम|गिराम|ग्रेम|gram|grams|gm|gms|g'), canonical: 'g' },
   { pattern: makeUnicodeRegex('लिटर|लीटर|litre|litres|liter|liters|ltr|ltrs|l'), canonical: 'litre' },
   { pattern: makeUnicodeRegex('मिली|मिलीलिटर|ml|mls|millilitre'), canonical: 'ml' },
   { pattern: makeUnicodeRegex('पुडा|पुडे|पुडी|पाकीट|पाकिटे|packet|packets|pkt|pkts|pouch'), canonical: 'packet' },
@@ -264,7 +269,7 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Milk', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा'] },
+  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
   { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
   { canonical: 'Peanuts', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'dane', 'peanuts', 'groundnuts'] },
   { canonical: 'Cashews', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
@@ -305,6 +310,13 @@ function normalizeMarathiTranscript(text) {
   // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
   s = deduplicateSpokenTokens(s);
 
+  // 1b. Correct common STT acoustic phonetics in Marathi speech
+  s = s.replace(makeUnicodeRegex('वाज\\s+किलो'), 'पाव किलो');
+  s = s.replace(makeUnicodeRegex('साकर'), 'साखर');
+  s = s.replace(makeUnicodeRegex('साट'), 'साठ');
+  s = s.replace(makeUnicodeRegex('शमब'), 'शंभर');
+  s = s.replace(makeUnicodeRegex('गरयम|गराम|गिराम|ग्रेम'), 'ग्राम');
+
   // 2. Convert Devanagari digits [०-९]
   s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
 
@@ -321,7 +333,7 @@ function normalizeMarathiTranscript(text) {
   }
 
   // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs, rupaye, ruapaye, etc.) (Unicode-safe)
-  const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|\\/-');
+  const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|रूपय|रूपये|रू|rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|\\/-');
   s = s.replace(priceRegex, ' rs ');
 
   // 7. Clean multiple spaces and comma separators
