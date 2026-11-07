@@ -115,18 +115,24 @@ function canonicalizeUnit(unit) {
 
 /**
  * Normalizes item names using the comprehensive Marathi Kirana database
- * Preserves the actual language spoken (Marathi, Hindi, or English).
+ * Supports outputLang: 'en' for English bill display, or 'mr' for Marathi.
  */
-function normalizeItemName(rawName, language = 'mr-IN') {
+function normalizeItemName(rawName, language = 'mr-IN', outputLang = null) {
   if (!rawName) return '';
   const converted = convertIndicScriptToDevanagari(rawName);
   const deduped = deduplicateSpokenTokens(converted);
-  const matched = canonicalizeMarathiItemName(deduped, language);
+  const matched = canonicalizeMarathiItemName(deduped, language, outputLang);
   if (matched) return matched;
 
   const clean = deduped.trim();
+  const isEnglish = String(outputLang || '').toLowerCase().startsWith('en') || String(language || '').toLowerCase().startsWith('en');
   if (/[\u0900-\u097F]/.test(clean)) {
-    return clean.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+    const stripped = clean.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+    if (isEnglish) {
+      const { devanagariToLatin } = require('./marathiNormalizer');
+      return devanagariToLatin ? devanagariToLatin(stripped) : stripped;
+    }
+    return stripped;
   }
   return clean.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -135,13 +141,13 @@ function normalizeItemName(rawName, language = 'mr-IN') {
  * Validates parsed items:
  * name not empty, quantity > 0, price >= 0
  */
-function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN') {
+function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN', outputLang = null) {
   if (!Array.isArray(rawItems)) return [];
   const valid = [];
 
   for (const item of rawItems) {
     if (!item) continue;
-    const name = normalizeItemName(String(item.name || item.item || '').trim(), language);
+    const name = normalizeItemName(String(item.name || item.item || '').trim(), language, outputLang);
     if (!name) continue;
 
     let quantity = parseFloat(item.quantity || item.qty);
@@ -189,7 +195,7 @@ class GeminiProvider {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY;
   }
 
-  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'mr-IN', priceMode = 'per_unit' }) {
+  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'mr-IN', priceMode = 'per_unit', outputLang = null }) {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
@@ -203,6 +209,11 @@ class GeminiProvider {
 
     const base64Audio = audioBuffer.toString('base64');
     const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
+
+    const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
+    const langPrompt = isEnglishOutput
+      ? `${SYSTEM_PROMPT}\nNOTE: User spoke in ${language}, BUT wants the final bill items in clean ENGLISH (e.g., Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nAudio input follows.`
+      : `${SYSTEM_PROMPT}\nUser preferred language hint: ${language}. Audio input follows.`;
 
     let lastError = null;
     for (const model of models) {
@@ -219,7 +230,7 @@ class GeminiProvider {
             contents: [
               {
                 parts: [
-                  { text: `${SYSTEM_PROMPT}\nUser preferred language hint: ${language}. Audio input follows.` },
+                  { text: langPrompt },
                   {
                     inlineData: {
                       mimeType: normalizedMime,
@@ -257,7 +268,7 @@ class GeminiProvider {
         const parsed = JSON.parse(cleanJson);
 
         const transcript = convertIndicScriptToDevanagari(String(parsed.transcript || '').trim());
-        const items = sanitizeItems(parsed.items, priceMode, language);
+        const items = sanitizeItems(parsed.items, priceMode, language, outputLang);
 
         return {
           transcript,
@@ -273,14 +284,16 @@ class GeminiProvider {
     throw lastError || new Error('Failed to parse audio with Gemini models');
   }
 
-  async parseTranscript({ transcript, language = 'mr-IN', priceMode = 'per_unit' }) {
+  async parseTranscript({ transcript, language = 'mr-IN', priceMode = 'per_unit', outputLang = null }) {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
     const preNormalized = normalizeMarathiTranscript(transcript);
+    const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
 
     const prompt = `${SYSTEM_PROMPT}
+${isEnglishOutput ? 'NOTE: Output all item names in clean ENGLISH (e.g. Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi item names to English grocery names.' : ''}
 
 Extract items from this counter billing transcript:
 Spoken Transcript: "${transcript}"
@@ -328,7 +341,7 @@ Price Mode: "${priceMode}"`;
         const cleanJson = textResponse.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
         const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
-        const items = sanitizeItems(rawItems, priceMode, language);
+        const items = sanitizeItems(rawItems, priceMode, language, outputLang);
 
         return {
           transcript,

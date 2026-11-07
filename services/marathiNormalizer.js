@@ -343,12 +343,62 @@ function normalizeMarathiTranscript(text) {
 }
 
 /**
- * Canonicalizes an extracted item name while strictly preserving the spoken language.
+ * Transliterates Devanagari script to Latin English text
+ */
+function devanagariToLatin(text) {
+  if (!text || typeof text !== 'string') return '';
+  const consonants = {
+    'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'ng',
+    'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'ny',
+    'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+    'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+    'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+    'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh',
+    'ष': 'sh', 'स': 's', 'ह': 'h', 'ळ': 'l', 'क्ष': 'ksh', 'ज्ञ': 'dny'
+  };
+  const vowels = {
+    'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo',
+    'ऋ': 'ru', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'अं': 'am', 'अः': 'ah'
+  };
+  const matras = {
+    'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'oo',
+    'ृ': 'ru', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
+    'ं': 'n', 'ँ': 'n', 'ः': 'h'
+  };
+  let result = '';
+  const chars = Array.from(text);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = chars[i + 1];
+    if (vowels[ch]) {
+      result += vowels[ch];
+    } else if (consonants[ch]) {
+      result += consonants[ch];
+      if (next === '्') {
+        i++; // halant skips inherent vowel
+      } else if (matras[next]) {
+        result += matras[next];
+        i++;
+      } else if (i < chars.length - 1 && chars[i + 1] !== ' ' && !matras[next]) {
+        result += 'a'; // inherent vowel
+      }
+    } else if (matras[ch]) {
+      result += matras[ch];
+    } else {
+      result += ch;
+    }
+  }
+  return result.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Canonicalizes an extracted item name.
+ * If outputLang is 'en', returns clean English name (Sugar, Toor Dal, Cooking Oil, Tea) or Latin transliteration.
  * If spoken in Marathi -> returns Marathi name (साखर, तूर डाळ, पोहे, गोडेतेल, चहा)
  * If spoken in Hindi -> returns Hindi name (चीनी, अरहर दाल, चावल, तेल, चाय)
  * If spoken in English -> returns English name (Sugar, Rice, Oil, Tea)
  */
-function canonicalizeMarathiItemName(name, language = 'mr-IN') {
+function canonicalizeMarathiItemName(name, language = 'mr-IN', outputLang = null) {
   if (!name || typeof name !== 'string') return '';
   const converted = convertIndicScriptToDevanagari(name);
   const deduped = deduplicateSpokenTokens(converted);
@@ -357,9 +407,9 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
   const isDevanagari = /[\u0900-\u097F]/.test(deduped);
   const langLower = String(language || 'mr-IN').toLowerCase();
   const isHindi = langLower.startsWith('hi');
-  const isEnglish = langLower.startsWith('en');
+  const isEnglish = langLower.startsWith('en') || String(outputLang || '').toLowerCase().startsWith('en');
   // If language is Marathi or default mr-IN
-  const isMarathi = langLower.startsWith('mr') || (!isHindi && !isEnglish);
+  const isMarathi = !isEnglish && (langLower.startsWith('mr') || !isHindi);
 
   // Strip common grammatical post-positions (साखरेची -> साखर, तेलाचे -> तेल)
   const stripped = clean
@@ -375,17 +425,21 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
         clean.split(/\s+/).includes(termLower) ||
         clean.includes(termLower)
       ) {
-        if (isMarathi) return entry.marathi || entry.canonical;
-        if (isHindi) return entry.hindi || entry.canonical;
         if (isEnglish) return entry.canonical;
-        return entry.marathi || entry.canonical;
+        if (isHindi) return entry.hindi || entry.canonical;
+        if (isMarathi) return entry.marathi || entry.canonical;
+        return entry.canonical;
       }
     }
   }
 
-  // Fallback: If in Devanagari, strip suffixes and return user's actual spoken word
+  // Fallback: If in Devanagari
   if (isDevanagari) {
-    return deduped.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+    const strippedDev = deduped.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
+    if (isEnglish) {
+      return devanagariToLatin(strippedDev);
+    }
+    return strippedDev;
   }
 
   // English fallback: Title case
@@ -393,6 +447,7 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN') {
 }
 
 module.exports = {
+  devanagariToLatin,
   deduplicateSpokenTokens,
   convertIndicScriptToDevanagari,
   normalizeMarathiTranscript,

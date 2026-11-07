@@ -75,13 +75,14 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
   }
 
   const language = req.body?.language || req.query?.language || 'mr-IN';
+  const outputLang = req.body?.outputLang || req.query?.outputLang || req.body?.billLanguage || req.query?.billLanguage || null;
   const priceMode = req.body?.priceMode || req.query?.priceMode || process.env.PRICE_MODE || 'per_unit';
 
-  console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}`);
+  console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}, outputLang: ${outputLang || 'default'}`);
 
   // Provider cascade: Gemini (primary) → OpenAI (automatic fallback)
   // Each provider gets 2 attempts; if both fail we return an error.
-  const audioArgs = { audioBuffer: file.buffer, mimeType: file.mimetype || 'audio/mp4', language, priceMode };
+  const audioArgs = { audioBuffer: file.buffer, mimeType: file.mimetype || 'audio/mp4', language, priceMode, outputLang };
 
   const providers = [
     { name: 'gemini', getInstance: () => new GeminiProvider() },
@@ -141,7 +142,8 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
  *  - priceMode: 'per_unit' | 'line_total' (optional)
  */
 router.post('/parse-bill', async (req, res) => {
-  const { transcript, language = 'mr-IN', priceMode = process.env.PRICE_MODE || 'per_unit' } = req.body || {};
+  const { transcript, language = 'mr-IN', priceMode = process.env.PRICE_MODE || 'per_unit', outputLang = null, billLanguage = null } = req.body || {};
+  const targetOutputLang = outputLang || billLanguage || null;
 
   if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
     return res.status(400).json({
@@ -150,10 +152,10 @@ router.post('/parse-bill', async (req, res) => {
   }
 
   const cleanText = transcript.trim();
-  console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}"`);
+  console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}", outputLang: ${targetOutputLang || 'default'}`);
 
   // Fast-path: Check Redis cache for identical spoken order transcript
-  const cacheKey = `parse:${language}:${priceMode}:${Buffer.from(cleanText.toLowerCase()).toString('base64').slice(0, 60)}`;
+  const cacheKey = `parse:${language}:${targetOutputLang || 'def'}:${priceMode}:${Buffer.from(cleanText.toLowerCase()).toString('base64').slice(0, 60)}`;
   const cachedResult = await redis.get(cacheKey);
   if (cachedResult && Array.isArray(cachedResult.items) && cachedResult.items.length > 0) {
     console.log(`[POST /api/parse-bill] Redis Cache HIT for "${cleanText}" (${cachedResult.items.length} items)`);
@@ -175,7 +177,7 @@ router.post('/parse-bill', async (req, res) => {
     const provider = getInstance();
     if (!provider || typeof provider.parseTranscript !== 'function') continue;
     try {
-      const result = await provider.parseTranscript({ transcript: cleanText, language, priceMode });
+      const result = await provider.parseTranscript({ transcript: cleanText, language, priceMode, outputLang: targetOutputLang });
       console.log(`[POST /api/parse-bill] ${name} extracted ${result.items?.length || 0} items.`);
       const responseData = {
         success: true,
