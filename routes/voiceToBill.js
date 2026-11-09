@@ -80,20 +80,24 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
 
   console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}, outputLang: ${outputLang || 'default'}`);
 
-  // Provider cascade: Gemini (primary) → OpenAI (automatic fallback)
-  // Each provider gets 2 attempts; if both fail we return an error.
+  // Provider cascade: OpenAI (lightning fast ~2s) -> Gemini (fallback)
   const audioArgs = { audioBuffer: file.buffer, mimeType: file.mimetype || 'audio/mp4', language, priceMode, outputLang };
 
   const providers = [
-    { name: 'gemini', getInstance: () => new GeminiProvider() },
     { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
+    { name: 'gemini', getInstance: () => new GeminiProvider() },
   ];
 
-  // If LLM_PROVIDER is explicitly set to openai or qwen, respect that (skip auto-cascade)
+  // If LLM_PROVIDER is explicitly set, prioritize it; otherwise default to OpenAI first
   const explicitProvider = process.env.LLM_PROVIDER;
-  const providerList = (explicitProvider && explicitProvider !== 'gemini')
-    ? [{ name: explicitProvider, getInstance: () => getLLMProvider() }]
-    : providers;
+  let providerList = providers;
+  if (explicitProvider === 'qwen' || explicitProvider === 'ollama') {
+    providerList = [{ name: explicitProvider, getInstance: () => getLLMProvider() }];
+  } else if (explicitProvider === 'gemini' && !process.env.OPENAI_API_KEY) {
+    providerList = [{ name: 'gemini', getInstance: () => new GeminiProvider() }];
+  } else {
+    providerList = providers;
+  }
 
   let lastErr = null;
 
@@ -163,15 +167,20 @@ router.post('/parse-bill', async (req, res) => {
     return res.json(cachedResult);
   }
 
-  // Provider cascade: Gemini (primary) → OpenAI (automatic fallback) → Regex (offline)
+  // Provider cascade: OpenAI (lightning fast ~1-2s) -> Gemini (fallback) -> Regex (offline)
   const textProviders = [
-    { name: 'gemini', getInstance: () => new GeminiProvider() },
     { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
+    { name: 'gemini', getInstance: () => new GeminiProvider() },
   ];
   const explicitTextProvider = process.env.LLM_PROVIDER;
-  const textProviderList = (explicitTextProvider && explicitTextProvider !== 'gemini')
-    ? [{ name: explicitTextProvider, getInstance: () => getLLMProvider() }]
-    : textProviders;
+  let textProviderList = textProviders;
+  if (explicitTextProvider === 'qwen' || explicitTextProvider === 'ollama') {
+    textProviderList = [{ name: explicitTextProvider, getInstance: () => getLLMProvider() }];
+  } else if (explicitTextProvider === 'gemini' && !process.env.OPENAI_API_KEY) {
+    textProviderList = [{ name: 'gemini', getInstance: () => new GeminiProvider() }];
+  } else {
+    textProviderList = textProviders;
+  }
 
   for (const { name, getInstance } of textProviderList) {
     const provider = getInstance();

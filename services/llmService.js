@@ -367,7 +367,7 @@ class OpenAIProvider {
     this.apiKey = apiKey || process.env.OPENAI_API_KEY;
   }
 
-  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'en', priceMode = 'per_unit' }) {
+  async parseAudio({ audioBuffer, mimeType = 'audio/mp4', language = 'mr-IN', priceMode = 'per_unit', outputLang = null }) {
     if (!this.apiKey) {
       throw new Error('OPENAI_API_KEY is not set in environment variables');
     }
@@ -403,6 +403,11 @@ class OpenAIProvider {
     const preNormalized = normalizeMarathiTranscript(transcript);
 
     // Step 2: Extract items using gpt-4o-mini
+    const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
+    const promptHint = isEnglishOutput
+      ? `Language: English items output. Spoken language is ${language}. Output all item names in clean standard ENGLISH (e.g. Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
+      : `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`;
+
     const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -415,7 +420,7 @@ class OpenAIProvider {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"` },
+          { role: 'user', content: promptHint },
         ],
       }),
     });
@@ -428,12 +433,61 @@ class OpenAIProvider {
     const chatData = await chatRes.json();
     const content = chatData.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(content);
-    const items = sanitizeItems(parsed.items, priceMode, language);
+    const items = sanitizeItems(parsed.items, priceMode, language, outputLang);
 
     return {
       transcript: convertIndicScriptToDevanagari(parsed.transcript || transcript),
       items,
       provider: 'openai',
+      model: 'whisper-1 + gpt-4o-mini',
+    };
+  }
+
+  async parseTranscript({ transcript, language = 'mr-IN', priceMode = 'per_unit', outputLang = null }) {
+    if (!this.apiKey) {
+      throw new Error('OPENAI_API_KEY is not set in environment variables');
+    }
+
+    const preNormalized = normalizeMarathiTranscript(transcript);
+    const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
+
+    const promptHint = isEnglishOutput
+      ? `NOTE: User spoke in ${language}, BUT wants the final bill items in clean ENGLISH (e.g., Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
+      : `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`;
+
+    const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: promptHint },
+        ],
+      }),
+    });
+
+    if (!chatRes.ok) {
+      const err = await chatRes.text();
+      throw new Error(`OpenAI Chat error: ${err}`);
+    }
+
+    const chatData = await chatRes.json();
+    const content = chatData.choices?.[0]?.message?.content || '{}';
+    const parsed = JSON.parse(content);
+    const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
+    const items = sanitizeItems(rawItems, priceMode, language, outputLang);
+
+    return {
+      transcript: convertIndicScriptToDevanagari(parsed.transcript || transcript),
+      items,
+      provider: 'openai',
+      model: 'gpt-4o-mini',
     };
   }
 }
@@ -559,14 +613,14 @@ Transcript: "${transcript}"`;
  * LLM_PROVIDER: 'gemini' (default, cloud) | 'qwen'/'ollama' (local) | 'openai'
  */
 function getLLMProvider(providerName = process.env.LLM_PROVIDER) {
-  const p = (providerName || 'gemini').toLowerCase();
+  const p = (providerName || (process.env.OPENAI_API_KEY ? 'openai' : 'gemini')).toLowerCase();
   if (p === 'openai') {
     return new OpenAIProvider();
   }
   if (p === 'qwen' || p === 'ollama') {
     return new OllamaQwenProvider();
   }
-  return new GeminiProvider();
+  return process.env.OPENAI_API_KEY ? new OpenAIProvider() : new GeminiProvider();
 }
 
 module.exports = {
