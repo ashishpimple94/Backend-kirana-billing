@@ -79,7 +79,7 @@ const BillSchema = new mongoose.Schema(
     },
     storeName: {
       type: String,
-      default: 'किराणा स्टोअर्स',
+      default: 'Bilzy Store',
     },
     transcript: {
       type: String,
