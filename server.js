@@ -75,4 +75,15 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Kirana Voice Billing Server running on http://0.0.0.0:${PORT}`);
   console.log(`📡 Voice-to-Bill API: POST http://localhost:${PORT}/api/voice-to-bill`);
   console.log(`📦 MongoDB Bills API: http://localhost:${PORT}/api/bills`);
+
+  // Keep-Alive Self Ping for Render Free Tier (every 10 minutes to prevent sleep)
+  const serverPublicUrl = process.env.RENDER_EXTERNAL_URL || 'https://backend-kirana-billing.onrender.com';
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${serverPublicUrl.replace(/\/+$/, '')}/api/health`);
+      console.log(`[Keep-Alive Ping] ${serverPublicUrl}/api/health -> status ${res.status}`);
+    } catch (err) {
+      console.warn('[Keep-Alive Ping] Warning:', err?.message || err);
+    }
+  }, 10 * 60 * 1000); // 10 minutes
 });
