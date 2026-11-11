@@ -125,7 +125,7 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
           result = await provider.parseAudio(audioArgs);
         } else {
           const transcript = await geminiTranscribe(audioArgs);
-          result = await provider.parseTranscript({ transcript, language, priceMode });
+          result = await provider.parseTranscript({ transcript, language, priceMode, outputLang });
         }
         console.log(`[POST /api/voice-to-bill] ${name} attempt ${attempt}: ${result.items.length} items. Transcript: "${result.transcript}"`);
         return res.json({
