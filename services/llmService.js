@@ -212,7 +212,7 @@ class GeminiProvider {
 
     const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
     const langPrompt = isEnglishOutput
-      ? `${SYSTEM_PROMPT}\nNOTE: User spoke in ${language}, BUT wants the final bill items in clean ENGLISH (e.g., Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nAudio input follows.`
+      ? `${SYSTEM_PROMPT}\nNOTE: User spoke in ${language}, BUT wants the final bill items written in simple PHONETIC ENGLISH / Latin script matching their exact Marathi spoken words (e.g., "Sakhar", "Maida", "Rawa", "Shengdane", "Chaha", "Gul", "Shabu", "Sarki Pend", "Pohe", "Godetel", "Meeth", "Dudh", "Tup"). DO NOT translate into dictionary English words (e.g. NEVER output "Sugar", "Peanuts", "Semolina", "Jaggery"). Keep it as the exact spoken Marathi words spelled in English letters.\nAudio input follows.`
       : `${SYSTEM_PROMPT}\nUser preferred language hint: ${language}. Audio input follows.`;
 
     let lastError = null;
@@ -293,7 +293,7 @@ class GeminiProvider {
     const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
 
     const prompt = `${SYSTEM_PROMPT}
-${isEnglishOutput ? 'NOTE: Output all item names in clean ENGLISH (e.g. Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi item names to English grocery names.' : ''}
+${isEnglishOutput ? 'NOTE: Output all item names in simple PHONETIC ENGLISH / Latin alphabet matching their exact Marathi spoken words (e.g., "Sakhar", "Maida", "Rawa", "Shengdane", "Chaha", "Gul", "Shabu", "Sarki Pend", "Pohe", "Godetel", "Meeth", "Dudh", "Tup"). DO NOT translate to English dictionary words (e.g. NEVER output Sugar, Peanuts, Jaggery). Use the exact Marathi words spelled in English letters.' : ''}
 
 Extract items from this counter billing transcript:
 Spoken Transcript: "${transcript}"
@@ -405,7 +405,7 @@ class OpenAIProvider {
     // Step 2: Extract items using gpt-4o-mini
     const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
     const promptHint = isEnglishOutput
-      ? `Language: English items output. Spoken language is ${language}. Output all item names in clean standard ENGLISH (e.g. Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
+      ? `Language: English letters output. Spoken language is ${language}. Output all item names in simple PHONETIC ENGLISH matching exact Marathi spoken words (e.g. Sakhar, Maida, Rawa, Shengdane, Chaha, Gul, Shabu, Sarki Pend, Pohe, Godetel, Meeth, Dudh, Tup). DO NOT translate to dictionary words (do NOT output Sugar, Peanuts, Jaggery).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
       : `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`;
 
     const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -452,7 +452,7 @@ class OpenAIProvider {
     const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
 
     const promptHint = isEnglishOutput
-      ? `NOTE: User spoke in ${language}, BUT wants the final bill items in clean ENGLISH (e.g., Sugar, Tea, Cooking Oil, Toor Dal, Poha, Peanuts, Milk). Translate Marathi/Hindi spoken items into standard English grocery names.\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
+      ? `NOTE: User spoke in ${language}, BUT wants the final bill items written in simple PHONETIC ENGLISH matching their exact spoken Marathi words (e.g., Sakhar, Maida, Rawa, Shengdane, Chaha, Gul, Shabu, Sarki Pend, Pohe, Godetel, Meeth, Dudh, Tup). DO NOT translate to dictionary words (do NOT output Sugar, Peanuts, Jaggery).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`
       : `Language: Marathi (Pure Devanagari script only, NEVER Gujarati or English transliteration).\nSpoken Transcript: "${transcript}"\nNormalized Words: "${preNormalized}"`;
 
     const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
