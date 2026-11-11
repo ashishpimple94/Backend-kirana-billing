@@ -69,10 +69,10 @@ const NAME_MAP = {
   maggi: 'Maggi', 'मॅगी': 'Maggi',
 };
 
-function normalizeName(name) {
+function normalizeName(name, language = 'mr-IN', outputLang = null) {
   if (!name) return 'Item';
-  const marathi = canonicalizeMarathiItemName(name);
-  if (marathi) return marathi;
+  const canonical = canonicalizeMarathiItemName(name, language, outputLang);
+  if (canonical) return canonical;
   const clean = name.trim().toLowerCase();
   if (NAME_MAP[clean]) return NAME_MAP[clean];
   return clean.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -96,6 +96,8 @@ function normalizeNumberWords(str) {
 
 function parseBillWithRegex(transcript, options = {}) {
   const priceMode = options.priceMode || 'per_unit';
+  const language = options.language || 'mr-IN';
+  const outputLang = options.outputLang || null;
   if (!transcript || !transcript.trim()) return [];
 
   let text = normalizeMarathiTranscript(transcript);
@@ -138,7 +140,7 @@ function parseBillWithRegex(transcript, options = {}) {
 
     const qty = isNaN(rawQty) || rawQty <= 0 ? 1 : rawQty;
     const unit = UNIT_MAP[rawUnit.toLowerCase()] || rawUnit.toLowerCase();
-    const cleanName = normalizeName(rawName.replace(/^[,\s]+|[,\s]+$/g, ''));
+    const cleanName = normalizeName(rawName.replace(/^[,\s]+|[,\s]+$/g, ''), language, outputLang);
     const priceVal = isNaN(rawPrice) || rawPrice < 0 ? 0 : rawPrice;
 
     const rate = priceMode === 'line_total' && qty > 0 ? parseFloat((priceVal / qty).toFixed(2)) : priceVal;

@@ -17,8 +17,9 @@ connectDB();
 // Enable CORS for mobile app & web client
 app.use(cors());
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON & URL-encoded bodies (allowing audio Base64 payloads up to 20MB)
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Rate Limiting: 60 requests per minute
 const limiter = rateLimit({

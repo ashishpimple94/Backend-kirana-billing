@@ -27,6 +27,19 @@ const upload = multer({
  * Expo versions — raw binary (Content-Type: audio/mp4) is always reliable.
  */
 function audioUploadMiddleware(req, res, next) {
+  // Support Base64 in JSON body (fastest & most reliable across all React Native/Expo versions)
+  if (req.body && req.body.audioBase64) {
+    const buffer = Buffer.from(req.body.audioBase64, 'base64');
+    req.file = {
+      buffer,
+      size: buffer.length,
+      mimetype: req.body.mimeType || 'audio/mp4',
+      originalname: 'voice_order.m4a',
+    };
+    next();
+    return;
+  }
+
   const ct = (req.headers['content-type'] || '').toLowerCase();
 
   if (ct.startsWith('multipart/form-data')) {
@@ -206,7 +219,7 @@ router.post('/parse-bill', async (req, res) => {
   }
 
   // Final fallback: Global Regex Parser (0ms, offline)
-  const regexItems = parseBillWithRegex(cleanText, { priceMode });
+  const regexItems = parseBillWithRegex(cleanText, { priceMode, language, outputLang: targetOutputLang });
   console.log(`[POST /api/parse-bill] Regex fallback extracted ${regexItems.length} items.`);
   return res.json({
     success: true,
