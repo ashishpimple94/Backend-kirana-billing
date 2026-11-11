@@ -208,7 +208,7 @@ class GeminiProvider {
     if (normalizedMime === 'audio/aac') normalizedMime = 'audio/aac'; // Gemini supports this
 
     const base64Audio = audioBuffer.toString('base64');
-    const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
+    const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
 
     const isEnglishOutput = String(outputLang || '').toLowerCase().startsWith('en');
     const langPrompt = isEnglishOutput
@@ -301,7 +301,7 @@ Normalized Words: "${preNormalized}"
 Language: ${language}
 Price Mode: "${priceMode}"`;
 
-    const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
+    const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
     let lastError = null;
 
     for (const model of models) {
@@ -502,7 +502,7 @@ async function geminiTranscribe({ audioBuffer, mimeType = 'audio/mp4', language 
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set in environment variables');
   const base64Audio = audioBuffer.toString('base64');
   // Try models in order: fast official models first, fallback to older
-  const transcribeModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  const transcribeModels = ['gemini-1.5-flash', 'gemini-2.0-flash'];
   for (const tModel of transcribeModels) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${tModel}:generateContent?key=${apiKey}`;
