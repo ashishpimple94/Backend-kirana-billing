@@ -216,8 +216,8 @@ const MARATHI_UNITS = [
 // Maintains exact Marathi, Hindi, and English representations
 const MARATHI_KIRANA_ITEMS = [
   // Sweeteners & Staples
-  { canonical: 'Sugar', marathi: 'साखर', hindi: 'चीनी', terms: ['साखर', 'साखरेची', 'साखरेचा', 'sakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'शक्कर'] },
-  { canonical: 'Jaggery', marathi: 'गूळ', hindi: 'गुड़', terms: ['गूळ', 'गुळ', 'गुळाची', 'गुळाचा', 'gul', 'gud', 'jaggery', 'कोल्हापुरी गूळ'] },
+  { canonical: 'Sugar', marathi: 'साखर', hindi: 'चीनी', terms: ['साखर', 'साखरेची', 'साखरेचा', 'sakhar', 'saakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'चीनी', 'शक्कर'] },
+  { canonical: 'Jaggery', marathi: 'गूळ', hindi: 'गुड़', terms: ['गूळ', 'गुळ', 'गुळाची', 'गुळाचा', 'gul', 'gud', 'jaggery', 'गुड़', 'कोल्हापुरी गूळ'] },
   { canonical: 'Salt', marathi: 'मीठ', hindi: 'नमक', terms: ['मीठ', 'मिठाचे', 'मिठाचा', 'meeth', 'mith', 'namak', 'salt', 'टाटा मीठ'] },
 
   // Grains & Flours
@@ -230,7 +230,8 @@ const MARATHI_KIRANA_ITEMS = [
   { canonical: 'Poha', marathi: 'पोहे', hindi: 'पोहा', terms: ['पोहे', 'पोहा', 'जाडे पोहे', 'पातळ पोहे', 'दगडी पोहे', 'pohe', 'poha'] },
   { canonical: 'Jowar', marathi: 'ज्वारी', hindi: 'ज्वार', terms: ['ज्वारी', 'ज्वारीचे पीठ', 'jowar', 'jowari', 'मालदांडी'] },
   { canonical: 'Bajra', marathi: 'बाजरी', hindi: 'बाजरा', terms: ['बाजरी', 'बाजरीचे पीठ', 'bajri', 'bajra'] },
-  { canonical: 'Sabudana', marathi: 'साबुदाणा', hindi: 'साबूदाना', terms: ['साबुदाणा', 'साबुदाना', 'sabudana', 'sago'] },
+  { canonical: 'Sabudana', marathi: 'साबुदाणा', hindi: 'साबूदाना', terms: ['साबुदाणा', 'साबुदाना', 'शाबू', 'shabu', 'sabudana', 'saboodana', 'sago'] },
+  { canonical: 'Sarki Pend', marathi: 'सरकी पेंड', hindi: 'सरकी पेंड', terms: ['सरकी पेंड', 'सरकी पेंढ', 'सरकी', 'sarki pend', 'sarki pendh', 'sarkipend', 'sarkipendh', 'cottonseed cake'] },
   { canonical: 'Murmura', marathi: 'चुरमुरे', hindi: 'मुरमुरा', terms: ['चुरमुरे', 'मुरमुरा', 'कुरमुरे', 'churmure', 'murmura', 'kurmura'] },
 
   // Dals & Pulses
@@ -269,9 +270,9 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Milk', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chai', 'tea', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
+  { canonical: 'Tea', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chaaha', 'chai', 'tea', 'चाय', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
   { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
-  { canonical: 'Peanuts', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'dane', 'peanuts', 'groundnuts'] },
+  { canonical: 'Peanuts', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'shengdana', 'shengadane', 'dane', 'peanuts', 'groundnuts', 'mungfali', 'moongfali', 'मूंगफली'] },
   { canonical: 'Cashews', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
   { canonical: 'Almonds', marathi: 'बदाम', hindi: 'बादाम', terms: ['बदाम', 'badam', 'almond'] },
   { canonical: 'Kishmish', marathi: 'मनुका', hindi: 'किशमिश', terms: ['मनुका', 'किशमिश', 'manuka', 'kishmish', 'raisins'] },
