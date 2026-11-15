@@ -36,33 +36,49 @@ function makeUnicodeRegex(patternStr, flags = 'gi') {
 
 // 2. Comprehensive Marathi & Indian Number Words (Hundreds, Compounds, Tens, Units, Fractions)
 const HUNDREDS_MAP = {
-  // Marathi Devanagari & Phonetic Hundreds
-  'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
-  'दोनशे': 200, 'दोंशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'do sau': 200, 'two hundred': 200,
-  'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'teen sau': 300, 'three hundred': 300,
-  'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'char sau': 400, 'four hundred': 400,
-  'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'pachashe': 500, 'paachashe': 500, 'pachashey': 500, 'pachshey': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
-  'सहाशे': 600, 'sahashe': 600, 'sahashey': 600, 'chha sau': 600, 'six hundred': 600,
-  'सातशे': 700, 'saatshe': 700, 'saatashe': 700, 'saatshey': 700, 'saat sau': 700, 'seven hundred': 700,
-  'आठशे': 800, 'aathshe': 800, 'aathashe': 800, 'aathshey': 800, 'aath sau': 800, 'eight hundred': 800,
-  'नऊशे': 900, 'naushe': 900, 'nauashe': 900, 'naushey': 900, 'nau sau': 900, 'nine hundred': 900,
-  'हजार': 1000, 'hazar': 1000, 'hazaar': 1000, 'ek hazar': 1000, 'one thousand': 1000,
+  // 550 Compounds (Marathi / Hindi / English)
+  'साडेपाचशे': 550, 'पाचशे पन्नास': 550, 'पाचशेपन्नास': 550, 'साढ़े पांच सौ': 550, 'साढ़े पांचसौ': 550, 'पांच सौ पचास': 550, 'पांचसौ पचास': 550, 'पाँच सौ पचास': 550, 'पाँचसौ पचास': 550, 'five fifty': 550, 'five-fifty': 550, 'five hundred fifty': 550, 'five hundred and fifty': 550, 'sade pachshe': 550, 'sade paachshe': 550, 'pachshe pannas': 550, 'paachshe pannas': 550, 'sade panch sau': 550, 'sade paanch sau': 550, 'panch sau pachas': 550, 'paanch sau pachas': 550, 'panch sau pachaas': 550,
 
-  // Direct Hundred-Tens Compounds
-  'एकशेचाळीस': 140, 'एकशेचालीस': 140, 'एकशेच्चाइश': 140, 'एकशेचायच': 140, 'एकशेचाईस': 140,
-  'दोनशेपन्नास': 250, 'दोंशेपन्नस': 250, 'दोनशे पन्नास': 250, 'दोंशे पन्नास': 250, 'donshepannas': 250, 'donshe pannas': 250,
+  // 650 Compounds
+  'साडेसहाशे': 650, 'सहाशे पन्नास': 650, 'सहाशेपन्नास': 650, 'साढ़े छह सौ': 650, 'साढ़े छहसौ': 650, 'छह सौ पचास': 650, 'छहसौ पचास': 650, 'छः सौ पचास': 650, 'six fifty': 650, 'six-fifty': 650, 'six hundred fifty': 650, 'six hundred and fifty': 650, 'sade sahashe': 650, 'sahashe pannas': 650, 'sade chha sau': 650, 'sade chheh sau': 650, 'chha sau pachas': 650, 'chheh sau pachas': 650, 'chhe sau pachas': 650, 'chha sau pachaas': 650,
 
-  // Colloquial half-hundreds
-  'साडेपाचशे': 550, 'sade pachshe': 550, 'sade paachshe': 550, 'sade pachashe': 550, 'sade paachashe': 550, 'pachashe pannas': 550, 'pachshe pannas': 550,
-  'साडेचारशे': 450, 'sade charshe': 450,
-  'साडेतीनशे': 350, 'sade teenshe': 350,
-  'अडीचशे': 250, 'adeechshe': 250, 'dhai sau': 250,
-  'दीडशे': 150, 'deedshe': 150, 'dedh sau': 150,
-  'साडेसहाशे': 650, 'sade sahashe': 650,
-  'साडेसातशे': 750, 'sade saatshe': 750,
-  'साडेआठशे': 850, 'sade aathshe': 850,
-  'साडेनऊशे': 950, 'sade naushe': 950,
+  // 750 Compounds
+  'साडेसातशे': 750, 'सातशे पन्नास': 750, 'सातशेपन्नास': 750, 'साढ़े सात सौ': 750, 'साढ़े सातसौ': 750, 'सात सौ पचास': 750, 'सातसौ पचास': 750, 'seven fifty': 750, 'seven-fifty': 750, 'seven hundred fifty': 750, 'seven hundred and fifty': 750, 'sade saatshe': 750, 'saatshe pannas': 750, 'sade saat sau': 750, 'sade sat sau': 750, 'saat sau pachas': 750, 'sat sau pachas': 750, 'saat sau pachaas': 750,
+
+  // 850 Compounds
+  'साडेआठशे': 850, 'आठशे पन्नास': 850, 'आठशेपन्नास': 850, 'साढ़े आठ सौ': 850, 'साढ़े आठसौ': 850, 'आठ सौ पचास': 850, 'आठसौ पचास': 850, 'eight fifty': 850, 'eight-fifty': 850, 'eight hundred fifty': 850, 'eight hundred and fifty': 850, 'sade aathshe': 850, 'aathshe pannas': 850, 'sade aath sau': 850, 'sade ath sau': 850, 'aath sau pachas': 850, 'ath sau pachas': 850, 'aath sau pachaas': 850,
+
+  // 950 Compounds
+  'साडेनऊशे': 950, 'नऊशे पन्नास': 950, 'नऊशेपन्नास': 950, 'साढ़े नौ सौ': 950, 'साढ़े नौसौ': 950, 'नौ सौ पचास': 950, 'नौसौ पचास': 950, 'nine fifty': 950, 'nine-fifty': 950, 'nine hundred fifty': 950, 'nine hundred and fifty': 950, 'sade naushe': 950, 'naushe pannas': 950, 'sade nau sau': 950, 'nau sau pachas': 950, 'nau sau pachaas': 950,
+
+  // 110 Compounds
+  'एकशे दहा': 110, 'एकशेदहा': 110, 'एक सौ दस': 110, 'एकसौ दस': 110, 'एक सौ दहा': 110, 'एकशे दस': 110, 'one ten': 110, 'one-ten': 110, 'one hundred ten': 110, 'one hundred and ten': 110, 'ekshe daha': 110, 'ek she daha': 110, 'ek sau das': 110, 'ek sau daha': 110,
+
+  // 250 Compounds
+  'अडीचशे': 250, 'दोनशे पन्नास': 250, 'दोनशेपन्नास': 250, 'दोंशे पन्नास': 250, 'दोंशेपन्नस': 250, 'ढाई सौ': 250, 'ढाईसौ': 250, 'दो सौ पचास': 250, 'दोसौ पचास': 250, 'two fifty': 250, 'two-fifty': 250, 'two hundred fifty': 250, 'two hundred and fifty': 250, 'adeechshe': 250, 'dhai sau': 250, 'donshe pannas': 250, 'donshepannas': 250, 'do sau pachas': 250, 'do sau pachaas': 250, 'don she pannas': 250,
+
+  // 350 Compounds
+  'साडेतीनशे': 350, 'तीनशे पन्नास': 350, 'तीनशेपन्नास': 350, 'साढ़े तीन सौ': 350, 'साढ़े तीनसौ': 350, 'तीन सौ पचास': 350, 'तीनसौ पचास': 350, 'three fifty': 350, 'three-fifty': 350, 'three hundred fifty': 350, 'three hundred and fifty': 350, 'sade teenshe': 350, 'teenshe pannas': 350, 'sade teen sau': 350, 'teen sau pachas': 350, 'teen sau pachaas': 350,
+
+  // 450 Compounds
+  'साडेचारशे': 450, 'चारशे पन्नास': 450, 'चारशेपन्नास': 450, 'साढ़े चार सौ': 450, 'साढ़े चारसौ': 450, 'चार सौ पचास': 450, 'चारसौ पचास': 450, 'four fifty': 450, 'four-fifty': 450, 'four hundred fifty': 450, 'four hundred and fifty': 450, 'sade charshe': 450, 'charshe pannas': 450, 'sade char sau': 450, 'sade chaar sau': 450, 'char sau pachas': 450, 'chaar sau pachas': 450, 'char sau pachaas': 450, 'chaar sau pachaas': 450,
+
+  // 150 / 140 / 125
+  'दीडशे': 150, 'डेढ़ सौ': 150, 'डेढ़सौ': 150, 'एक सौ पचास': 150, 'one fifty': 150, 'one-fifty': 150, 'one hundred fifty': 150, 'one hundred and fifty': 150, 'deedshe': 150, 'dedh sau': 150, 'ek sau pachas': 150, 'ek sau pachaas': 150,
+  'एकशेचाळीस': 140, 'एकशेचालीस': 140, 'एकशेच्चाइश': 140, 'एकशेचायच': 140, 'एकशेचाईस': 140, 'एकशे चाळीस': 140, 'एक सौ चालीस': 140, 'one forty': 140, 'one-forty': 140, 'one hundred forty': 140,
   'सव्वाशे': 125, 'savvashe': 125,
+
+  // Marathi, Hindi & English Hundreds
+  'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'एक सौ': 100, 'एकसौ': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
+  'दोनशे': 200, 'दोंशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'दो सौ': 200, 'दोसौ': 200, 'do sau': 200, 'two hundred': 200,
+  'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'तीन सौ': 300, 'तीनसौ': 300, 'teen sau': 300, 'three hundred': 300,
+  'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'चार सौ': 400, 'चारसौ': 400, 'char sau': 400, 'chaar sau': 400, 'four hundred': 400,
+  'पाचशे': 500, 'pachshe': 500, 'paachshe': 500, 'pachashe': 500, 'paachashe': 500, 'pachashey': 500, 'pachshey': 500, 'पाँच सौ': 500, 'पाँचसौ': 500, 'पांच सौ': 500, 'पांचसौ': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
+  'सहाशे': 600, 'sahashe': 600, 'sahashey': 600, 'छह सौ': 600, 'छहसौ': 600, 'chha sau': 600, 'chheh sau': 600, 'six hundred': 600,
+  'सातशे': 700, 'saatshe': 700, 'saatashe': 700, 'saatshey': 700, 'सात सौ': 700, 'सातसौ': 700, 'saat sau': 700, 'sat sau': 700, 'seven hundred': 700,
+  'आठशे': 800, 'aathshe': 800, 'aathashe': 800, 'aathshey': 800, 'आठ सौ': 800, 'आठसौ': 800, 'aath sau': 800, 'ath sau': 800, 'eight hundred': 800,
+  'नऊशे': 900, 'naushe': 900, 'nauashe': 900, 'naushey': 900, 'नौ सौ': 900, 'नौसौ': 900, 'nau sau': 900, 'nine hundred': 900,
+  'हजार': 1000, 'hazar': 1000, 'hazaar': 1000, 'ek hazar': 1000, 'एक हजार': 1000, 'one thousand': 1000,
 };
 
 const UNITS_AND_TENS_MAP = {

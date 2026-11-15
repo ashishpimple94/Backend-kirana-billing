@@ -130,6 +130,18 @@ function parseBillWithRegex(transcript, options = {}) {
     'gi'
   );
 
+  // Pattern D: <price> <rs> <name> (e.g. 550 rs chaha, 110 rs tea, 250 rs tel)
+  const patternD = new RegExp(
+    `(\\d+(?:\\.\\d+)?)\\s*${currRegex}\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)(?=[,\\s;+]|\\d|$)`,
+    'gi'
+  );
+
+  // Pattern C: <name> <price> <rs> (e.g. chaha 550 rs, sakhar 650 rs, tel 750 rs)
+  const patternC = new RegExp(
+    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)\\s*${currRegex}`,
+    'gi'
+  );
+
   const matchedSpans = [];
 
   const addMatch = (start, end, rawName, rawQty, rawUnit, rawPrice) => {
@@ -143,8 +155,16 @@ function parseBillWithRegex(transcript, options = {}) {
     const cleanName = normalizeName(rawName.replace(/^[,\s]+|[,\s]+$/g, ''), language, outputLang);
     const priceVal = isNaN(rawPrice) || rawPrice < 0 ? 0 : rawPrice;
 
-    const rate = priceMode === 'line_total' && qty > 0 ? parseFloat((priceVal / qty).toFixed(2)) : priceVal;
-    const amount = Math.round(rate * qty * 100) / 100;
+    let rate = priceMode === 'line_total' && qty > 0 ? parseFloat((priceVal / qty).toFixed(2)) : priceVal;
+    let amount = Math.round(rate * qty * 100) / 100;
+
+    // Handle grams (250gm, 500gm, 100gm, etc.):
+    // Spoken price is the price for that weight portion (e.g. 250gm tea @ 110 rs, 500gm sugar @ 30 rs).
+    // Amount is 110 rs. Rate is per-kg rate ((price / qty) * 1000) so standard cart math works seamlessly.
+    if ((unit === 'gm' || unit === 'g') && qty >= 20) {
+      amount = priceVal;
+      rate = parseFloat(((priceVal / qty) * 1000).toFixed(2));
+    }
 
     matchedSpans.push({
       start,
@@ -170,6 +190,14 @@ function parseBillWithRegex(transcript, options = {}) {
 
   for (const m of text.matchAll(patternE)) {
     addMatch(m.index, m.index + m[0].length, m[2], parseFloat(m[1]), m[3], parseFloat(m[4]));
+  }
+
+  for (const m of text.matchAll(patternD)) {
+    addMatch(m.index, m.index + m[0].length, m[2], 1, 'packet', parseFloat(m[1]));
+  }
+
+  for (const m of text.matchAll(patternC)) {
+    addMatch(m.index, m.index + m[0].length, m[1], 1, 'packet', parseFloat(m[2]));
   }
 
   matchedSpans.sort((a, b) => a.start - b.start);

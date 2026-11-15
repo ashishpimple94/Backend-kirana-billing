@@ -63,10 +63,27 @@ CRITICAL RULES:
 - "दोन किलो साखर पाचशे पन्नास रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 550
 - "एकशे दहा रुपयांचे तेल" -> name: "तेल", quantity: 1, unit: "litre", price: 110
 - "एकशे आठ रुपयांची साखर" -> name: "साखर", quantity: 1, unit: "packet", price: 108
+- "चहा ५५० रुपये" / "चहा five fifty" / "पाचशे पन्नास रुपये चहा" -> name: "चहा", quantity: 1, unit: "packet", price: 550
+- "साखर ६५० रुपये" / "sugar six fifty" -> name: "साखर", quantity: 1, unit: "packet", price: 650
+- "तेल ७५० रुपये" / "oil seven fifty" -> name: "तेल", quantity: 1, unit: "packet", price: 750
+- "तेल ९५० रुपये" / "oil nine fifty" -> name: "तेल", quantity: 1, unit: "packet", price: 950
+- "चहा ११० रुपये" / "tea one ten" -> name: "चहा", quantity: 1, unit: "packet", price: 110
+- "तेल २५० रुपये" / "dhai sau tel" / "two fifty oil" -> name: "तेल", quantity: 1, unit: "packet", price: 250
+- "तेल ३५० रुपये" / "three fifty oil" -> name: "तेल", quantity: 1, unit: "packet", price: 350
+- "साखर ४५० रुपये" / "four fifty sugar" -> name: "साखर", quantity: 1, unit: "packet", price: 450
 - "अर्धा किलो पोहे तीस रुपये" -> name: "पोहे", quantity: 0.5, unit: "kg", price: 30
 - "पाव किलो चहा पन्नास रुपये" -> name: "चहा", quantity: 0.25, unit: "kg", price: 50
 - "दीड लिटर तेल दोनशे रुपये" -> name: "तेल", quantity: 1.5, unit: "litre", price: 200
-- If quantity is missing use 1. If price is missing use 0.
+- If quantity is missing use 1 and unit "packet" (or "bottle" for oil). If price is missing use 0.
+
+4b. GRAMS SPECIFICATION (250gm, 500gm, 100gm, grams):
+- When user speaks grams (e.g. "250gm", "250 ग्राम", "500gm", "500 ग्राम", "100gm"):
+  - Set unit as "gm" and quantity as the spoken gram amount (e.g. 250, 500, 100).
+  - NEVER convert 250gm to 0.25 kg, and NEVER convert 500gm to 0.5 kg. Keep unit: "gm".
+  - The spoken price is ALWAYS the total price for that packet/quantity!
+  - "250gm चहा 110 रुपये" -> name: "चहा", quantity: 250, unit: "gm", price: 110
+  - "500gm साखर 30 रुपये" -> name: "साखर", quantity: 500, unit: "gm", price: 30
+  - "100gm काजू 85 रुपये" -> name: "काजू", quantity: 100, unit: "gm", price: 85
 
 5. COLLOQUIAL PHONETIC ERROR RECOVERY (MANDATORY):
 Fast spoken Marathi Kirana speech often has colloquial accents & STT acoustic mishearings:
@@ -177,17 +194,18 @@ function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN', out
       price = 0;
     }
 
-    // Handle priceMode: if line_total was spoken and qty > 0, convert to per-unit rate
-    if (priceMode === 'line_total' && quantity > 0) {
-      price = parseFloat((price / quantity).toFixed(2));
-    }
-
     const unit = canonicalizeUnit(item.unit);
     let amount = Math.round(quantity * price * 100) / 100;
-    if ((unit === 'g' || unit === 'gm') && quantity >= 50 && price > 20) {
-      amount = Math.round(((quantity * price) / 1000) * 100) / 100;
-    } else if (unit === 'ml' && quantity >= 50 && price > 30) {
-      amount = Math.round(((quantity * price) / 1000) * 100) / 100;
+
+    // Handle grams (250gm, 500gm, 100gm, etc.):
+    // Spoken price is the price for that weight portion (e.g. 250gm tea @ 110 rs, 500gm sugar @ 30 rs).
+    // Amount is 110 rs. Price is per-kg rate ((price / quantity) * 1000) so frontend cart math works seamlessly.
+    if ((unit === 'g' || unit === 'gm') && quantity >= 20) {
+      amount = price;
+      price = parseFloat(((price / quantity) * 1000).toFixed(2));
+    } else if (priceMode === 'line_total' && quantity > 0) {
+      price = parseFloat((price / quantity).toFixed(2));
+      amount = Math.round(price * quantity * 100) / 100;
     }
 
     valid.push({
@@ -395,8 +413,8 @@ class OpenAIProvider {
     formData.append('file', blob, 'audio.m4a');
     formData.append('model', 'whisper-1');
     if (language) formData.append('language', language.split('-')[0]);
-    // Guide Whisper with realistic Marathi kirana phrases to eliminate phonetic mishearings
-    formData.append('prompt', 'मराठी किराणा दुकानाचे बिल: १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, ५ किलो, अर्धा किलो, पाव किलो, मूंग डाळ १३० रुपये, तूर डाळ, गोडेतेल, साठ रुपये, पन्नास रुपये, एकशे चाळीस रुपये, पाचशे पन्नास रुपये.');
+    // Guide Whisper with realistic Marathi, Hindi & English kirana phrases, compound numbers and grams
+    formData.append('prompt', 'मराठी किराणा बिल: १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, ५ किलो, अर्धा किलो, पाव किलो, मूंग डाळ १३० रुपये, तूर डाळ, गोडेतेल, साठ रुपये, पन्नास रुपये, एकशे चाळीस रुपये, पाचशे पन्नास रुपये, २५० ग्रॅम (250gm) चहा ११० रुपये, ५०० ग्रॅम (500gm) साखर २५ रुपये, १०० ग्रॅम (100gm), 550, 650, 750, 950, 110, 250, 350, 450, five fifty, six fifty, seven fifty, nine fifty, one ten, two fifty, three fifty, four fifty, five hundred fifty, dhai sau, sade pachshe, sade teenshe, sade charshe, sade saatshe.');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
