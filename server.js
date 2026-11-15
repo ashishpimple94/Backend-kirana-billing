@@ -77,8 +77,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📡 Voice-to-Bill API: POST http://localhost:${PORT}/api/voice-to-bill`);
   console.log(`📦 MongoDB Bills API: http://localhost:${PORT}/api/bills`);
 
-  // Keep-Alive Self Ping for Render Free Tier (every 10 minutes to prevent sleep)
-  const serverPublicUrl = process.env.RENDER_EXTERNAL_URL || 'https://backend-kirana-billing.onrender.com';
+  // Keep-Alive Self Ping (every 10 minutes)
+  const serverPublicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://purple-ibis-694136.hostingersite.com';
   setInterval(async () => {
     try {
       const res = await fetch(`${serverPublicUrl.replace(/\/+$/, '')}/api/health`);
