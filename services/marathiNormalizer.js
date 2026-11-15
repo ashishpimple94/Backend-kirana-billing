@@ -216,7 +216,7 @@ const MARATHI_UNITS = [
 // Maintains exact Marathi, Hindi, and English representations
 const MARATHI_KIRANA_ITEMS = [
   // Sweeteners & Staples
-  { canonical: 'Sakhar', marathi: 'साखर', hindi: 'चीनी', terms: ['साखर', 'साखरेची', 'साखरेचा', 'sakhar', 'saakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'चीनी', 'शक्कर'] },
+  { canonical: 'Sakhar', marathi: 'साखर', hindi: 'चीनी', terms: ['साखर', 'साखरेची', 'साखरेचा', 'साकर', 'शुकर', 'सुकर', 'sakhar', 'saakhar', 'sakharachi', 'sakhrechi', 'cheeni', 'chini', 'sugar', 'चीनी', 'शक्कर'] },
   { canonical: 'Gul', marathi: 'गूळ', hindi: 'गुड़', terms: ['गूळ', 'गुळ', 'गुळाची', 'गुळाचा', 'gul', 'gud', 'jaggery', 'गुड़', 'कोल्हापुरी गूळ'] },
   { canonical: 'Meeth', marathi: 'मीठ', hindi: 'नमक', terms: ['मीठ', 'मिठाचे', 'मिठाचा', 'meeth', 'mith', 'namak', 'salt', 'टाटा मीठ'] },
 
@@ -224,7 +224,7 @@ const MARATHI_KIRANA_ITEMS = [
   { canonical: 'Tandul', marathi: 'तांदूळ', hindi: 'चावल', terms: ['तांदूळ', 'तांदुळ', 'तांदळाचे', 'तांदळाची', 'tandul', 'tandool', 'chawal', 'rice', 'भात', 'कोलम', 'इंद्रायणी', 'बासमती', 'तुकडा'] },
   { canonical: 'Gahu', marathi: 'गहू', hindi: 'गेहूं', terms: ['गहू', 'गव्हाचे', 'गव्हाचा', 'gahu', 'gehu', 'wheat', 'शरबती गहू', 'सीहोर गहू', 'लोकवन गहू'] },
   { canonical: 'Atta', marathi: 'गव्हाचे पीठ', hindi: 'आटा', terms: ['आटा', 'पीठ', 'गव्हाचे पीठ', 'कणिक', 'atta', 'aata', 'peeth', 'pith', 'wheat flour', 'चक्की फ्रेश'] },
-  { canonical: 'Maida', marathi: 'मैदा', hindi: 'मैदा', terms: ['मैदा', 'मैद्याचे', 'maida', 'all purpose flour'] },
+  { canonical: 'Maida', marathi: 'मैदा', hindi: 'मैदा', terms: ['मैदा', 'मैद्याचे', 'माईदा', 'मैधा', 'माईधा', 'मायदा', 'maida', 'maidha', 'mayda', 'all purpose flour'] },
   { canonical: 'Besan', marathi: 'बेसन', hindi: 'बेसन', terms: ['बेसन', 'चना पीठ', 'हरभरा पीठ', 'डाळीचे पीठ', 'besan', 'gram flour'] },
   { canonical: 'Rawa', marathi: 'रवा', hindi: 'सूजी', terms: ['रवा', 'बारीक रवा', 'जाडा रवा', 'सुजी', 'सूजी', 'rawa', 'rava', 'sooji', 'suji', 'semolina'] },
   { canonical: 'Pohe', marathi: 'पोहे', hindi: 'पोहा', terms: ['पोहे', 'पोहा', 'जाडे पोहे', 'पातळ पोहे', 'दगडी पोहे', 'pohe', 'poha'] },
@@ -237,7 +237,7 @@ const MARATHI_KIRANA_ITEMS = [
   // Dals & Pulses
   { canonical: 'Tur Dal', marathi: 'तूर डाळ', hindi: 'अरहर दाल', terms: ['तूर डाळ', 'तुरीची डाळ', 'तूरडाळ', 'tur dal', 'toor dal', 'arhar dal'] },
   { canonical: 'Chana Dal', marathi: 'चना डाळ', hindi: 'चना दाल', terms: ['चना डाळ', 'हरभरा डाळ', 'chana dal', 'harbhara dal'] },
-  { canonical: 'Moong Dal', marathi: 'मूग डाळ', hindi: 'मूंग दाल', terms: ['मूग डाळ', 'मुगाची डाळ', 'moong dal', 'mung dal', 'हिरवे मूग'] },
+  { canonical: 'Moong Dal', marathi: 'मूग डाळ', hindi: 'मूंग दाल', terms: ['मूग डाळ', 'मुगाची डाळ', 'मूंग डाळ', 'मूंगडाल', 'मुंग दाल', 'मुंगदाल', 'moong dal', 'mung dal', 'हिरवे मूग'] },
   { canonical: 'Urad Dal', marathi: 'उडीद डाळ', hindi: 'उड़द दाल', terms: ['उडीद डाळ', 'उडदाची डाळ', 'urad dal', 'udid dal'] },
   { canonical: 'Masoor Dal', marathi: 'मसूर डाळ', hindi: 'मसूर दाल', terms: ['मसूर डाळ', 'मसुराची डाळ', 'masoor dal', 'अख्खा मसूर'] },
   { canonical: 'Chole', marathi: 'काबुली चणे', hindi: 'छोले', terms: ['काबुली चणे', 'काबुली चना', 'छोले', 'chole', 'kabuli chana'] },
@@ -270,9 +270,9 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Dudh', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Chaha', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'chaha', 'chaaha', 'chai', 'tea', 'चाय', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
+  { canonical: 'Chaha', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'सर्गं पत्ती', 'सर्गप चहा', 'सर्कं पत्ती', 'चहा पत्ती', 'चाय पत्ती', 'chaha', 'chaaha', 'chai', 'tea', 'चाय', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
   { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
-  { canonical: 'Shengdane', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'shengdane', 'shengdana', 'shengadane', 'dane', 'peanuts', 'groundnuts', 'mungfali', 'moongfali', 'मूंगफली'] },
+  { canonical: 'Shengdane', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'शेंग दानी', 'शेंगदानी', 'शेंग दाने', 'शेंगदाने', 'shengdane', 'shengdana', 'shengadane', 'sheng dane', 'sheng dani', 'shengdani', 'dane', 'peanuts', 'groundnuts', 'mungfali', 'moongfali', 'मूंगफली'] },
   { canonical: 'Kaju', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
   { canonical: 'Badam', marathi: 'बदाम', hindi: 'बादाम', terms: ['बदाम', 'badam', 'almond'] },
   { canonical: 'Manuka', marathi: 'मनुका', hindi: 'किशमिश', terms: ['मनुका', 'किशमिश', 'manuka', 'kishmish', 'raisins'] },
@@ -313,8 +313,17 @@ function normalizeMarathiTranscript(text) {
 
   // 1b. Correct common STT acoustic phonetics in Marathi speech
   s = s.replace(makeUnicodeRegex('वाज\\s+किलो'), 'पाव किलो');
-  s = s.replace(makeUnicodeRegex('साकर'), 'साखर');
+  s = s.replace(makeUnicodeRegex('साकर|शुकर|सुकर'), 'साखर');
   s = s.replace(makeUnicodeRegex('साट'), 'साठ');
+  s = s.replace(makeUnicodeRegex('माईदा|मैधा|माईधा|मायदा'), 'मैदा');
+  s = s.replace(makeUnicodeRegex('शेंग\\s*दानी|शेंगदानी|शेंग\\s*दाने|शेंगदाने'), 'शेंगदाणे');
+  s = s.replace(makeUnicodeRegex('सर्गं\\s*पत्ती|सर्गप\\s*चहा|सर्कं\\s*पत्ती|चहा\\s*पत्ती'), 'चहा');
+  s = s.replace(makeUnicodeRegex('पात्स'), 'पाच');
+  s = s.replace(makeUnicodeRegex('मूंगडाल|मुंग\\s*दाल|मुंगदाल'), 'मूग डाळ');
+  s = s.replace(makeUnicodeRegex('पणनसरुपई|पण्नास\\s*रुपये|पन्नास\\s*रुब्बाई|पणनस\\s*रुपये|पणनस'), '५० रुपये');
+  s = s.replace(makeUnicodeRegex('एकशिचाईस|एकशिचारीफ|एकशेचाईस|एकशे\\s*चाईस'), '१४०');
+  s = s.replace(makeUnicodeRegex('पस्चे\\s*पन्नस|पश्य\\s*पन्नास|फायू\\s*हंडरेट\\s*फिर्प्टे|फायू\\s*हाढरेट\\s*फिर्फिति'), '५५० रुपये');
+  s = s.replace(makeUnicodeRegex('रोपेज|रुपेज|रोबइ|रोपई|रुब्बाई|रुपिज|रुपीज'), 'रुपये');
   s = s.replace(makeUnicodeRegex('शमब'), 'शंभर');
   s = s.replace(makeUnicodeRegex('गरयम|गराम|गिराम|ग्रेम'), 'ग्राम');
 

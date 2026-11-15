@@ -68,6 +68,23 @@ CRITICAL RULES:
 - "दीड लिटर तेल दोनशे रुपये" -> name: "तेल", quantity: 1.5, unit: "litre", price: 200
 - If quantity is missing use 1. If price is missing use 0.
 
+5. COLLOQUIAL PHONETIC ERROR RECOVERY (MANDATORY):
+Fast spoken Marathi Kirana speech often has colloquial accents & STT acoustic mishearings:
+- "साकर", "शुकर", "शुगर", "सुकर" -> साखर (Sakhar)
+- "माईदा", "मैधा", "माईधा", "मायदा" -> मैदा (Maida)
+- "शेंग दानी", "शेंगदानी", "शेंग दाने", "शेंगदाने" -> शेंगदाणे (Shengdane)
+- "रवा", "सुजी", "बारीक रवा", "जाडा रवा" -> रवा (Rawa)
+- "सर्गं पत्ती", "सर्गप चहा", "सर्कं पत्ती", "चहा पत्ती", "चाय पत्ती" -> चहा (Chaha)
+- "सरकी पेंड", "सरकी पेंढ" -> सरकी पेंड (Sarki Pend)
+- "मूंगडाल", "मुंग दाल", "मुंगदाल" -> मूग डाळ (Moong Dal)
+- "साट" -> 60
+- "पणनसरुपई", "पण्नास", "पन्नास रुब्बाई", "पणनस" -> 50
+- "एकशिचाईस", "एकशिचारीफ", "एकशेचाईस" -> 140
+- "पस्चे पन्नस", "पश्य पन्नास", "फायू हंडरेट फिर्प्टे", "फायू हाढरेट फिर्फिति" -> 550
+- "पात्स" -> 5
+- "रोपेज", "रुपेज", "रुब्बाई", "रोपई", "रोबइ" -> रुपये
+Always reconstruct and extract the genuine kirana item name, quantity, and price!
+
 Return ONLY JSON:
 {"transcript": string,
  "items": [{"name": string, "quantity": number, "unit": string, "price": number}]}
@@ -378,8 +395,8 @@ class OpenAIProvider {
     formData.append('file', blob, 'audio.m4a');
     formData.append('model', 'whisper-1');
     if (language) formData.append('language', language.split('-')[0]);
-    // Guide Whisper to transcribe in pure Marathi Devanagari (avoid Gujarati hallucination)
-    formData.append('prompt', 'मराठी किराणा बिल: चहा, साखर, तूर डाळ, पोहे, तेल, गहू, तांदूळ, गव्हाचे पीठ, साबण, कांदे, बटाटे, दूध, बिस्कीट, रुपये, किलो, ग्रॅम, लिटर, १००, ५००, ५२०, १४०, ६०, ५०, ९०, ८०, ४०, १०, ५, ९००, ५६८, ७८९, ५५०, ११०, १०८');
+    // Guide Whisper with realistic Marathi kirana phrases to eliminate phonetic mishearings
+    formData.append('prompt', 'मराठी किराणा दुकानाचे बिल: १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, ५ किलो, अर्धा किलो, पाव किलो, मूंग डाळ १३० रुपये, तूर डाळ, गोडेतेल, साठ रुपये, पन्नास रुपये, एकशे चाळीस रुपये, पाचशे पन्नास रुपये.');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
