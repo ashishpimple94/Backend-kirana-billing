@@ -286,7 +286,12 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Dudh', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Chaha', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'सर्गं पत्ती', 'सर्गप चहा', 'सर्कं पत्ती', 'चहा पत्ती', 'चाय पत्ती', 'chaha', 'chaaha', 'chai', 'tea', 'चाय', 'वाघ बकरी', 'रेड लेबल', 'सोसायटी चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'super dust', 'dust tea'] },
+  { canonical: 'Sargam Patti Chaha', marathi: 'सरगम पत्ती चहा', hindi: 'सरगम पत्ती चाय', terms: ['सरगम पत्ती चहा', 'सरगम चहा', 'सरगम पत्ती', 'सरगम', 'सर्गं पत्ती', 'सर्गप चहा', 'सर्कं पत्ती', 'sargam patti chaha', 'sargam chaha', 'sargam patti', 'sargam tea', 'sargam'] },
+  { canonical: 'Super Dust Chaha', marathi: 'सुपर डस्ट चहा', hindi: 'सुपर डस्ट चाय', terms: ['सुपर डस्ट चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'सूपर डस्ट चहा', 'डस्ट चहा', 'super dust chaha', 'super dust tea', 'super dust', 'dust tea'] },
+  { canonical: 'Red Label Tea', marathi: 'रेड लेबल चहा', hindi: 'रेड लेबल चाय', terms: ['रेड लेबल चहा', 'रेड लेबल', 'red label chaha', 'red label tea', 'red label'] },
+  { canonical: 'Wagh Bakri Tea', marathi: 'वाघ बकरी चहा', hindi: 'वाघ बकरी चाय', terms: ['वाघ बकरी चहा', 'वाघ बकरी', 'wagh bakri chaha', 'wagh bakri tea', 'wagh bakri'] },
+  { canonical: 'Society Tea', marathi: 'सोसायटी चहा', hindi: 'सोसायटी चाय', terms: ['सोसायटी चहा', 'सोसायटी', 'society chaha', 'society tea', 'society'] },
+  { canonical: 'Chaha', marathi: 'चहा', hindi: 'चाय', terms: ['चहा', 'चाहा', 'चहाची', 'चाहाची', 'चहा पावडर', 'चहापत्ती', 'चहा पत्ती', 'चाय पत्ती', 'chaha', 'chaaha', 'chai', 'tea', 'चाय'] },
   { canonical: 'Coffee', marathi: 'कॉफी', hindi: 'कॉफ़ी', terms: ['कॉफी', 'coffee', 'nescafe', 'bru'] },
   { canonical: 'Shengdane', marathi: 'शेंगदाणे', hindi: 'मूंगफली', terms: ['शेंगदाणे', 'शेंगदाणा', 'दाणे', 'शेंग दानी', 'शेंगदानी', 'शेंग दाने', 'शेंगदाने', 'shengdane', 'shengdana', 'shengadane', 'sheng dane', 'sheng dani', 'shengdani', 'dane', 'peanuts', 'groundnuts', 'mungfali', 'moongfali', 'मूंगफली'] },
   { canonical: 'Kaju', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
@@ -327,13 +332,28 @@ function normalizeMarathiTranscript(text) {
   // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
   s = deduplicateSpokenTokens(s);
 
-  // 1b. Correct common STT acoustic phonetics in Marathi speech
+  // 1a. Separate glued price words (e.g. 'pacahsherupaye' -> 'pacahshe rupaye', 'पन्नासरुपये' -> 'पन्नास रुपये')
+  s = s.replace(/([A-Za-z\u0900-\u097F]+?)(rupaye|rupay|rupees|rupee|रुपये|रुपया|रू|rs)\b/gi, '$1 $2');
+
+  // 1b. Collapse duplicate spoken units/weights (e.g. 'pav kilo 250 gm' -> '250 gm', 'ardha kilo 500 gm' -> '500 gm')
+  s = s.replace(/(?:pav\s*kilo|पाव\s*किलो)\s+(?:250\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?)/gi, '250 gm');
+  s = s.replace(/(?:ardha\s*kilo|aadha\s*kilo|अर्धा\s*किलो|आधा\s*किलो)\s+(?:500\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?)/gi, '500 gm');
+  s = s.replace(/(?:ek\s*kilo|एक\s*किलो)\s+(?:1000\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?|1\s*(?:kg|kilo|किलो))/gi, '1 kg');
+  s = s.replace(/(?:don\s*kilo|दोन\s*किलो)\s+(?:2\s*(?:kg|kilo|किलो))/gi, '2 kg');
+
+  // Phonetic variants of 550
+  s = s.replace(/\bsade\s*pacahshe\b/gi, '550');
+  s = s.replace(/\bsade\s*pacashe\b/gi, '550');
+  s = s.replace(/\bsade\s*pachashe\b/gi, '550');
+
+  // 1c. Correct common STT acoustic phonetics in Marathi speech
   s = s.replace(makeUnicodeRegex('वाज\\s+किलो'), 'पाव किलो');
   s = s.replace(makeUnicodeRegex('साकर|शुकर|सुकर'), 'साखर');
   s = s.replace(makeUnicodeRegex('साट'), 'साठ');
   s = s.replace(makeUnicodeRegex('माईदा|मैधा|माईधा|मायदा'), 'मैदा');
   s = s.replace(makeUnicodeRegex('शेंग\\s*दानी|शेंगदानी|शेंग\\s*दाने|शेंगदाने'), 'शेंगदाणे');
-  s = s.replace(makeUnicodeRegex('सर्गं\\s*पत्ती|सर्गप\\s*चहा|सर्कं\\s*पत्ती|चहा\\s*पत्ती'), 'चहा');
+  s = s.replace(makeUnicodeRegex('सर्गं\\s*पत्ती|सर्गप\\s*चहा|सर्कं\\s*पत्ती'), 'सरगम पत्ती चहा');
+  s = s.replace(makeUnicodeRegex('सूपर\\s*डस्ट|सुपर\\s*डस्ट'), 'सुपर डस्ट चहा');
   s = s.replace(makeUnicodeRegex('पात्स'), 'पाच');
   s = s.replace(makeUnicodeRegex('मूंगडाल|मुंग\\s*दाल|मुंगदाल'), 'मूग डाळ');
   s = s.replace(makeUnicodeRegex('पणनसरुपई|पण्नास\\s*रुपये|पन्नास\\s*रुब्बाई|पणनस\\s*रुपये|पणनस'), '५० रुपये');
@@ -361,6 +381,9 @@ function normalizeMarathiTranscript(text) {
   // 6. Normalizes price indicators (रुपये, रुपयांची, रुपयांचे, रु, rs, rupaye, ruapaye, etc.) (Unicode-safe)
   const priceRegex = makeUnicodeRegex('रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\\.|रु|रूपय|रूपये|रू|rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|\\/-');
   s = s.replace(priceRegex, ' rs ');
+
+  // 6b. Collapse duplicate adjacent numbers spoken for emphasis (e.g. "550 550 rs" -> "550 rs", "70 70 rs" -> "70 rs")
+  s = s.replace(/\b(\d+(?:\.\d+)?)\s+\1\b/g, '$1');
 
   // 7. Clean multiple spaces and comma separators
   s = s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ' , ').trim();

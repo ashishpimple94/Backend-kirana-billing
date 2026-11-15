@@ -63,6 +63,20 @@ CRITICAL RULES:
 - "दोन किलो साखर पाचशे पन्नास रुपये" -> name: "साखर", quantity: 2, unit: "kg", price: 550
 - "एकशे दहा रुपयांचे तेल" -> name: "तेल", quantity: 1, unit: "litre", price: 110
 - "एकशे आठ रुपयांची साखर" -> name: "साखर", quantity: 1, unit: "packet", price: 108
+- "एक किलो सरगम पत्ती चहा ५५० साडेपाचशे रुपये" / "ek kilo sargam patti chaha 550 sade pacahsherupaye" -> name: "सरगम पत्ती चहा", quantity: 1, unit: "kg", price: 550
+- "पाव किलो २५० ग्रॅम सुपर डस्ट ७० सत्तर रुपये" / "pav kilo 250 gm super dust 70 sattar rupaye" -> name: "सुपर डस्ट चहा", quantity: 250, unit: "gm", price: 70
+- "shengdana 85 rupaye" / "शेंगदाणे ८५ रुपये" -> name: "शेंगदाणे", quantity: 1, unit: "packet", price: 85
+- "maida 45 rupaye" / "मैदा ४५ रुपये" -> name: "मैदा", quantity: 1, unit: "packet", price: 45
+- "rawa 55 rupaye" / "रवा ५५ रुपये" -> name: "रवा", quantity: 1, unit: "packet", price: 55
+- "shengdana 95 rupaye" -> name: "शेंगदाणे", quantity: 1, unit: "packet", price: 95
+- "maida 25 rupaye" -> name: "मैदा", quantity: 1, unit: "packet", price: 25
+- "chaha 98 rupaye" -> name: "चहा", quantity: 1, unit: "packet", price: 98
+- "super dust 99 rupaye" -> name: "सुपर डस्ट चहा", quantity: 1, unit: "packet", price: 99
+- "sargam 70 rupaye" -> name: "सरगम पत्ती चहा", quantity: 1, unit: "packet", price: 70
+- "shengdana 75 rupaye" -> name: "शेंगदाणे", quantity: 1, unit: "packet", price: 75
+- "chaha 65 rupaye" -> name: "चहा", quantity: 1, unit: "packet", price: 65
+- "rawa 25 rupaye" -> name: "रवा", quantity: 1, unit: "packet", price: 25
+- "maida 15 rupaye" -> name: "मैदा", quantity: 1, unit: "packet", price: 15
 - "चहा ५५० रुपये" / "चहा five fifty" / "पाचशे पन्नास रुपये चहा" -> name: "चहा", quantity: 1, unit: "packet", price: 550
 - "साखर ६५० रुपये" / "sugar six fifty" -> name: "साखर", quantity: 1, unit: "packet", price: 650
 - "तेल ७५० रुपये" / "oil seven fifty" -> name: "तेल", quantity: 1, unit: "packet", price: 750
@@ -413,8 +427,8 @@ class OpenAIProvider {
     formData.append('file', blob, 'audio.m4a');
     formData.append('model', 'whisper-1');
     if (language) formData.append('language', language.split('-')[0]);
-    // Guide Whisper with realistic Marathi, Hindi & English kirana phrases, compound numbers and grams
-    formData.append('prompt', 'मराठी किराणा बिल: १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, ५ किलो, अर्धा किलो, पाव किलो, मूंग डाळ १३० रुपये, तूर डाळ, गोडेतेल, साठ रुपये, पन्नास रुपये, एकशे चाळीस रुपये, पाचशे पन्नास रुपये, २५० ग्रॅम (250gm) चहा ११० रुपये, ५०० ग्रॅम (500gm) साखर २५ रुपये, १०० ग्रॅम (100gm), 550, 650, 750, 950, 110, 250, 350, 450, five fifty, six fifty, seven fifty, nine fifty, one ten, two fifty, three fifty, four fifty, five hundred fifty, dhai sau, sade pachshe, sade teenshe, sade charshe, sade saatshe.');
+    // Guide Whisper with realistic Marathi, Hindi & English kirana phrases, brand names, compound numbers and grams
+    formData.append('prompt', 'मराठी किराणा बिल: १ किलो सरगम पत्ती चहा ५५० साडेपाचशे रुपये, पाव किलो २५० ग्रॅम सुपर डस्ट ७० सत्तर रुपये, sargam patti chaha, super dust chaha, १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, २५० ग्रॅम (250gm) चहा ११० रुपये, ५०० ग्रॅम (500gm) साखर २५ रुपये, १०० ग्रॅम (100gm), 85, 95, 25, 55, 45, 98, 99, 70, 75, 65, 15, 550, 650, 750, 950, 110, 250, 350, 450, five fifty, six fifty, seven fifty, nine fifty, one ten, two fifty, three fifty, four fifty, five hundred fifty, dhai sau, sade pachshe, sade pacahshe, sattar rupaye.');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',

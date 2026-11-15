@@ -62,6 +62,9 @@ const NAME_MAP = {
   tandul: 'Rice', chawal: 'Rice', rice: 'Rice', 'तांदूळ': 'Rice', 'चावल': 'Rice',
   atta: 'Atta', pith: 'Atta', 'आटा': 'Atta',
   chaha: 'Tea', chai: 'Tea', tea: 'Tea', 'चहा': 'Tea', 'चाय': 'Tea',
+  sargam: 'Sargam Patti Chaha', 'sargam patti': 'Sargam Patti Chaha', 'sargam patti chaha': 'Sargam Patti Chaha', 'सरगम पत्ती चहा': 'Sargam Patti Chaha', 'सरगम': 'Sargam Patti Chaha',
+  'super dust': 'Super Dust Chaha', 'super dust chaha': 'Super Dust Chaha', 'सुपर डस्ट': 'Super Dust Chaha', 'सुपर डस्ट चहा': 'Super Dust Chaha',
+  shengdana: 'Shengdana', shengdane: 'Shengdana', 'शेंगदाणे': 'Shengdana',
   doodh: 'Milk', dudh: 'Milk', milk: 'Milk', 'दूध': 'Milk',
   saban: 'Soap', soap: 'Soap', 'साबण': 'Soap',
   biscuit: 'Biscuit', biscuits: 'Biscuit', 'बिस्कीट': 'Biscuit',
@@ -143,7 +146,7 @@ function parseBillWithRegex(transcript, options = {}) {
   );
 
   const matchedSpans = [];
-
+``
   const addMatch = (start, end, rawName, rawQty, rawUnit, rawPrice) => {
     const overlaps = matchedSpans.some(
       (s) => (start >= s.start && start < s.end) || (end > s.start && end <= s.end)
