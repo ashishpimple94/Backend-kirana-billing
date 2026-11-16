@@ -1,0 +1,103 @@
+name: CI/CD Pipeline - Kirana Voice Billing Backend
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1 # Mumbai (India)
+  ECR_REPOSITORY: kirana-billing-backend
+  ECS_CLUSTER: kirana-cluster
+  ECS_SERVICE: kirana-backend-service
+
+jobs:
+  # ==========================================
+  # STAGE 1: Automated Testing & Linting (CI)
+  # ==========================================
+  test:
+    name: Run Automated Tests & Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Syntax Check Server
+        run: node --check server.js
+
+      - name: Run NLP & Kirana Speech Test Suite
+        run: npm test
+
+      - name: Verify Dockerfile Build
+        run: docker build -t test-backend .
+
+  # ==========================================
+  # STAGE 2: Build & Deploy to AWS (CD)
+  # ==========================================
+  deploy:
+    name: Deploy to Amazon ECS / ECR
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Check AWS Secrets Configured
+        id: check-aws
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "::notice ::AWS credentials are not set in GitHub Secrets yet. Test suite passed! Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in GitHub repo Settings > Secrets to enable automated push to Amazon ECS."
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS Credentials
+        if: steps.check-aws.outputs.configured == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        if: steps.check-aws.outputs.configured == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        if: steps.check-aws.outputs.configured == 'true'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          echo "Pushing images to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to Amazon ECS (Rolling Update)
+        if: steps.check-aws.outputs.configured == 'true'
+        run: |
+          echo "Triggering new deployment on Amazon ECS Service: $ECS_SERVICE in cluster: $ECS_CLUSTER..."
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
