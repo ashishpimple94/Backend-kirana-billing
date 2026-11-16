@@ -75,7 +75,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Kirana Voice Billing Server running on http://0.0.0.0:${PORT}`);
   console.log(`📡 Voice-to-Bill API: POST http://localhost:${PORT}/api/voice-to-bill`);
   console.log(`📦 MongoDB Bills API: http://localhost:${PORT}/api/bills`);
@@ -91,3 +91,10 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   }, 10 * 60 * 1000); // 10 minutes
 });
+
+// Configure keep-alive & timeouts so reverse proxies (Hostinger/Cloudflare/Nginx) do not drop connections prematurely
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+if (server.requestTimeout !== undefined) {
+  server.requestTimeout = 90000;
+}
