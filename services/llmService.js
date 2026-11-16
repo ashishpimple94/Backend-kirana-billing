@@ -41,13 +41,29 @@ CRITICAL RULES:
 - "डझन" (dozen) = 12 piece, "नग" = piece, "पुडा" / "पाकीट" = packet
 
 3. MARATHI NUMBERS, HUNDREDS & COMPOUNDS (CRITICAL):
-- Single numbers: एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90.
-- Hundreds: शंभर/एकशे=100, दोनशे=200, तीनशे=300, चारशे=400, पाचशे=500, सहाशे=600, सातशे=700, आठशे=800, नऊशे=900, एक हजार=1000.
-- Colloquial half-hundreds: साडेपाचशे=550, साडेचारशे=450, साडेतीनशे=350, अडीचशे=250, दीडशे=150.
+- Single numbers: एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, पस्तीस=35, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90.
+- Hundreds: शंभर/एकशे/एकसे=100, दोनशे/दोनसे=200, तीनशे/तीनसे=300, चारशे/चारसे=400, पाचशे/पाचसे=500, सहाशे/सहासे=600, सातशे/सातसे=700, आठशे/आठसे=800, नऊशे/नऊसे/नवशे=900, एक हजार=1000.
+- Thousands & Lakhs (Scalable Compound Numbers):
+  - "पाच हजार" / "pach hajar" / "panch hazar" / "5 hajar" = 5000
+  - "दहा हजार" / "daha hajar" / "das hazar" = 10000
+  - "दोन हजार दोनशे वीस" / "don hajar donshe vees" = 2220
+  - "दोन हजार दोनशे तीस" / "don hajar donshe tees" = 2230
+  - "एक हजार पाचशे" / "दीड हजार" = 1500
+  - "अडीच हजार" = 2500
+  - "एक लाख" = 100000
+- Colloquial half-hundreds & regional accents:
+  - "एकशे पस्तीस" / "एकसे पस्तीस" / "ekshe pastis" / "ekse pastis" / "ek she pastis" = 135
+  - "एकशे चाळीस" / "एकसे चाळीस" / "ekshe chalis" / "ekse chalis" / "ek she chalis" = 140
+  - "एकशे नव्वद" / "एकसे नव्वद" / "ekshe navvad" / "ekse navvad" / "ek she navvad" = 190
+  - "पाचशे पन्नास" / "साडेपाचशे" / "साडे पाचशे" / "sade pacahshe" / "sade pachshe" / "pachse pannas" = 550
+  - "नऊशे ऐंशी" / "नऊशे ऐशी" / "नऊसे ऐंशी" / "naushe ayshi" / "navshe aishi" / "nawshe ayshi" = 980
+  - साडेसहाशे=650, साडेसातशे=750, साडेआठशे=850, साडेनऊशे=950, अडीचशे=250, दीडशे=150, सव्वाशे=125.
 - Compound hundreds & prices (MUST align exactly with spoken price!):
-  "एकशे चाळीस" (ekshe chalis) = 140
-  "एकशे दहा" (ekshe daha) = 110
-  "एकशे आठ" (ekshe aath) = 108
+  "एकशे पस्तीस" = 135
+  "एकशे चाळीस" = 140
+  "एकशे नव्वद" = 190
+  "एकशे दहा" = 110
+  "एकशे आठ" = 108
   "पाचशे अडुसष्ट" / "पाचशे अडसठ" = 568
   "सातशे एकोणनव्वद" = 789
   "पाचशे पन्नास" / "साडेपाचशे" = 550
@@ -195,17 +211,28 @@ function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN', out
 
   for (const item of rawItems) {
     if (!item) continue;
-    const name = normalizeItemName(String(item.name || item.item || '').trim(), language, outputLang);
-    if (!name) continue;
+    let rawNameStr = String(item.name || item.item || '').trim();
+    // Guardrail: Strip stray currency/rate/unit tokens that occasionally leak into name
+    rawNameStr = rawNameStr.replace(/\b(?:\d+(?:\.\d+)?\s*(?:kg|kilo|gm|g|gram|litre|l|ml|packet|box|dozen|pcs|rs|रुपये|रु|रू))\b/gi, '').trim();
+    if (!rawNameStr || /^[\d\s.,;+!?-]+$/.test(rawNameStr)) continue;
 
+    const name = normalizeItemName(rawNameStr, language, outputLang);
+    if (!name || /^[\d\s.,;+!?-]+$/.test(name)) continue;
+
+    // Guardrail: Quantity validation & clamping
     let quantity = parseFloat(item.quantity || item.qty);
     if (isNaN(quantity) || quantity <= 0) {
       quantity = 1;
+    } else if (quantity > 10000) {
+      quantity = 10000;
     }
 
+    // Guardrail: Price validation & clamping
     let price = parseFloat(item.price || item.rate || 0);
     if (isNaN(price) || price < 0) {
       price = 0;
+    } else if (price > 1000000) {
+      price = 1000000;
     }
 
     const unit = canonicalizeUnit(item.unit);
@@ -428,7 +455,7 @@ class OpenAIProvider {
     formData.append('model', 'whisper-1');
     if (language) formData.append('language', language.split('-')[0]);
     // Guide Whisper with realistic Marathi, Hindi & English kirana phrases, brand names, compound numbers and grams
-    formData.append('prompt', 'मराठी किराणा बिल: १ किलो सरगम पत्ती चहा ५५० साडेपाचशे रुपये, पाव किलो २५० ग्रॅम सुपर डस्ट ७० सत्तर रुपये, sargam patti chaha, super dust chaha, १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० रुपये, सरकी पेंड १८० रुपये, चहा पावडर ५५० रुपये, २५० ग्रॅम (250gm) चहा ११० रुपये, ५०० ग्रॅम (500gm) साखर २५ रुपये, १०० ग्रॅम (100gm), 85, 95, 25, 55, 45, 98, 99, 70, 75, 65, 15, 550, 650, 750, 950, 110, 250, 350, 450, five fifty, six fifty, seven fifty, nine fifty, one ten, two fifty, three fifty, four fifty, five hundred fifty, dhai sau, sade pachshe, sade pacahshe, sattar rupaye.');
+    formData.append('prompt', 'मराठी किराणा बिल: १ किलो सरगम पत्ती चहा ५५० साडेपाचशे रुपये, पाव किलो २५० ग्रॅम सुपर डस्ट ७० सत्तर रुपये, sargam patti chaha, super dust chaha, १ किलो साखर ६० रुपये, २ किलो मैदा ५० रुपये, १ किलो रवा ५० रुपये, २ किलो शेंगदाणे १४० एकशे चाळीस रुपये, १ किलो काजू १३५ एकशे पस्तीस रुपये, १ किलो बदाम १९० एकशे नव्वद रुपये, १ किलो चारोळी ९८० नऊशे ऐंशी रुपये, २ बॉक्स साबण ५००० पाच हजार रुपये, २२२० दोन हजार दोनशे वीस रुपये, २२३० दोन हजार दोनशे तीस रुपये, १०००० दहा हजार रुपये, २५० ग्रॅम (250gm) चहा ११० रुपये, ५०० ग्रॅम (500gm) साखर २५ रुपये, १०० ग्रॅम (100gm), १० ग्रॅम (10gm) वेलची १ तोळा, 85, 95, 25, 55, 45, 98, 99, 70, 75, 65, 15, 135, 140, 190, 550, 650, 750, 950, 980, 2220, 2230, 5000, 10000, ekshe pastis, ekse pastis, ekshe chalis, ekse chalis, ekshe navvad, ekse navvad, sade pacahshe, sade pachshe, pachse pannas, naushe ayshi, navshe aishi, don hajar donshe vees, don hajar donshe tees, pach hajar, paach hajar, panch hazar, daha hajar, das hazar.');
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',

@@ -33,13 +33,15 @@ const NUMBER_WORDS_MAP = {
   twenty: 20, bees: 20, vees: 20, 'वीस': 20, 'बीस': 20,
   twentyfive: 25, pachis: 25, panchvis: 25, 'पंचवीस': 25, 'पच्चीस': 25,
   thirty: 30, tees: 30, tis: 30, 'तीस': 30,
+  pastis: 35, paintis: 35, 'पस्तीस': 35, 'पैंतीस': 35,
   forty: 40, chalis: 40, chaalis: 40, 'चाळीस': 40, 'चालीस': 40,
   fifty: 50, pachas: 50, pannas: 50, 'पन्नास': 50, 'पचास': 50,
   sixty: 60, saath: 60, sath: 60, 'साठ': 60,
   seventy: 70, sattar: 70, 'सत्तर': 70,
-  eighty: 80, assi: 80, ayshi: 80, 'ऐंशी': 80, 'अस्सी': 80,
-  ninety: 90, navve: 90, nabbe: 90, 'नव्वद': 90, 'नब्बे': 90,
+  eighty: 80, assi: 80, ayshi: 80, aishi: 80, ainshi: 80, 'ऐंशी': 80, 'अस्सी': 80,
+  ninety: 90, navve: 90, nabbe: 90, navvad: 90, nawad: 90, 'नव्वद': 90, 'नब्बे': 90,
   hundred: 100, sau: 100, shambhar: 100, 'शंभर': 100, 'सौ': 100,
+  thousand: 1000, hajar: 1000, hazar: 1000, 'हजार': 1000,
 };
 
 const UNIT_MAP = {
