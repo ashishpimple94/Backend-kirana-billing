@@ -140,7 +140,7 @@ const UNITS_AND_TENS_MAP = {
   'पंधरा': 15, 'pandhra': 15, 'pandrah': 15, 'fifteen': 15,
   'चौदा': 14, 'chauda': 14, 'chaudah': 14, 'fourteen': 14,
   'तेरा': 13, 'tera': 13, 'terah': 13, 'thirteen': 13,
-  'बारा': 12, 'bara': 12, 'barah': 12, 'twelve': 12, 'डझन': 12, 'dozen': 12,
+  'बारा': 12, 'bara': 12, 'barah': 12, 'twelve': 12,
   'अकरा': 11, 'akara': 11, 'gyarah': 11, 'eleven': 11,
   'दहा': 10, 'daha': 10, 'das': 10, 'ten': 10,
   'नऊ': 9, 'nau': 9, 'nav': 9, 'nine': 9,
@@ -286,8 +286,8 @@ const MARATHI_KIRANA_ITEMS = [
 
   // Dairy & Daily Essentials
   { canonical: 'Dudh', marathi: 'दूध', hindi: 'दूध', terms: ['दूध', 'दुध', 'दुधाची', 'dudh', 'doodh', 'milk', 'गोकुळ दूध', 'अमुल दूध', 'चितळे दूध'] },
-  { canonical: 'Sargam Patti Chaha', marathi: 'सरगम पत्ती चहा', hindi: 'सरगम पत्ती चाय', terms: ['सरगम पत्ती चहा', 'सरगम चहा', 'सरगम पत्ती', 'सरगम', 'सर्गं पत्ती', 'सर्गप चहा', 'सर्कं पत्ती', 'sargam patti chaha', 'sargam chaha', 'sargam patti', 'sargam tea', 'sargam'] },
-  { canonical: 'Super Dust Chaha', marathi: 'सुपर डस्ट चहा', hindi: 'सुपर डस्ट चाय', terms: ['सुपर डस्ट चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'सूपर डस्ट चहा', 'डस्ट चहा', 'super dust chaha', 'super dust tea', 'super dust', 'dust tea'] },
+  { canonical: 'Sargam Dust Tea', marathi: 'सरगम पत्ती चहा', hindi: 'सरगम पत्ती चाय', terms: ['सरगम पत्ती चहा', 'सरगम चहा', 'सरगम पत्ती', 'सरगम', 'सर्गं पत्ती', 'सर्गप चहा', 'सर्कं पत्ती', 'sargam patti chaha', 'sargam chaha', 'sargam patti', 'sargam tea', 'sargam dust tea', 'sargam'] },
+  { canonical: 'Super Dust Tea', marathi: 'सुपर डस्ट चहा', hindi: 'सुपर डस्ट चाय', terms: ['सुपर डस्ट चहा', 'सुपर डस्ट', 'सूपर डस्ट', 'सूपर डस्ट चहा', 'डस्ट चहा', 'super dust chaha', 'super dust tea', 'super dust', 'dust tea'] },
   { canonical: 'Red Label Tea', marathi: 'रेड लेबल चहा', hindi: 'रेड लेबल चाय', terms: ['रेड लेबल चहा', 'रेड लेबल', 'red label chaha', 'red label tea', 'red label'] },
   { canonical: 'Wagh Bakri Tea', marathi: 'वाघ बकरी चहा', hindi: 'वाघ बकरी चाय', terms: ['वाघ बकरी चहा', 'वाघ बकरी', 'wagh bakri chaha', 'wagh bakri tea', 'wagh bakri'] },
   { canonical: 'Society Tea', marathi: 'सोसायटी चहा', hindi: 'सोसायटी चाय', terms: ['सोसायटी चहा', 'सोसायटी', 'society chaha', 'society tea', 'society'] },
@@ -297,6 +297,7 @@ const MARATHI_KIRANA_ITEMS = [
   { canonical: 'Kaju', marathi: 'काजू', hindi: 'काजू', terms: ['काजू', 'काजू तुकडा', 'kaju', 'cashew'] },
   { canonical: 'Badam', marathi: 'बदाम', hindi: 'बादाम', terms: ['बदाम', 'badam', 'almond'] },
   { canonical: 'Manuka', marathi: 'मनुका', hindi: 'किशमिश', terms: ['मनुका', 'किशमिश', 'manuka', 'kishmish', 'raisins'] },
+  { canonical: 'Charoli', marathi: 'चारोळी', hindi: 'चिरौंजी', terms: ['चारोळी', 'चारोळ्या', 'चिरौंजी', 'charoli', 'charolee', 'chironji', 'chironjee'] },
 
   // Household & Personal Care
   { canonical: 'Saban', marathi: 'साबण', hindi: 'साबुन', terms: ['साबण', 'अंगाचा साबण', 'कपड्यांचा साबण', 'saban', 'soap', 'लाईफबॉय', 'लक्स', 'डेटॉल', 'संतूर'] },
@@ -332,10 +333,18 @@ function normalizeMarathiTranscript(text) {
   // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
   s = deduplicateSpokenTokens(s);
 
-  // 1a. Separate glued price words (e.g. 'pacahsherupaye' -> 'pacahshe rupaye', 'पन्नासरुपये' -> 'पन्नास रुपये')
+  // 1a. Convert tola (Indian Kirana standard: 1 tola = 10 grams)
+  s = s.replace(/(?:ardha\s*tola|aadha\s*tola|अर्धा\s*तोळा|आधा\s*तोला)\b/gi, '5 gm');
+  s = s.replace(/(?:ek\s*tola|एक\s*तोळा|एक\s*तोला)\b/gi, '10 gm');
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:tola|tole|तोळा|तोळे|तोला)\b/gi, (_, n) => (parseFloat(n) * 10) + ' gm');
+
+  // 1b. Separate glued price words (e.g. 'pacahsherupaye' -> 'pacahshe rupaye', 'पन्नासरुपये' -> 'पन्नास रुपये')
   s = s.replace(/([A-Za-z\u0900-\u097F]+?)(rupaye|rupay|rupees|rupee|रुपये|रुपया|रू|rs)\b/gi, '$1 $2');
 
-  // 1b. Collapse duplicate spoken units/weights (e.g. 'pav kilo 250 gm' -> '250 gm', 'ardha kilo 500 gm' -> '500 gm')
+  // 1c. Handle per-unit spoken phrases ('60 per kg' -> '60 rs', '140rs per kg' -> '140 rs', '120 per dozen' -> '120 rs')
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:rs|rupees|rupaye|rupay|रुपये|रू)?\s*(?:per|\/|prati|दर|प्रति)\s*(?:kg|kilo|kilogram|किलो|किग्रा|litre|liter|लिटर|लीटर|l|dozen|डझन|दर्जन|gm|ग्रॅम|ग्राम|packet|पाकीट|box|खोके|pcs|नग)\b/gi, '$1 rs');
+
+  // 1d. Collapse duplicate spoken units/weights (e.g. 'pav kilo 250 gm' -> '250 gm', 'ardha kilo 500 gm' -> '500 gm')
   s = s.replace(/(?:pav\s*kilo|पाव\s*किलो)\s+(?:250\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?)/gi, '250 gm');
   s = s.replace(/(?:ardha\s*kilo|aadha\s*kilo|अर्धा\s*किलो|आधा\s*किलो)\s+(?:500\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?)/gi, '500 gm');
   s = s.replace(/(?:ek\s*kilo|एक\s*किलो)\s+(?:1000\s*(?:gm|gms|g|gram|grams|ग्रॅम|ग्राम)?|1\s*(?:kg|kilo|किलो))/gi, '1 kg');

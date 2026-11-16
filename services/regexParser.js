@@ -22,7 +22,7 @@ const NUMBER_WORDS_MAP = {
   nine: 9, nau: 9, nav: 9, 'नऊ': 9, 'नौ': 9,
   ten: 10, das: 10, daha: 10, 'दहा': 10, 'दस': 10,
   eleven: 11, gyarah: 11, akara: 11, 'अकरा': 11,
-  twelve: 12, barah: 12, bara: 12, 'बारा': 12, dozen: 12, 'डझन': 12, 'दर्जन': 12,
+  twelve: 12, barah: 12, bara: 12, 'बारा': 12,
   thirteen: 13, terah: 13, tera: 13, 'तेरा': 13,
   fourteen: 14, chaudah: 14, chauda: 14, 'चौदा': 14,
   fifteen: 15, pandrah: 15, pandhra: 15, 'पंधरा': 15,
@@ -161,10 +161,10 @@ function parseBillWithRegex(transcript, options = {}) {
     let rate = priceMode === 'line_total' && qty > 0 ? parseFloat((priceVal / qty).toFixed(2)) : priceVal;
     let amount = Math.round(rate * qty * 100) / 100;
 
-    // Handle grams (250gm, 500gm, 100gm, etc.):
-    // Spoken price is the price for that weight portion (e.g. 250gm tea @ 110 rs, 500gm sugar @ 30 rs).
+    // Handle grams (10gm / 1 tola, 250gm, 500gm, 100gm, etc.):
+    // Spoken price is the price for that weight portion (e.g. 10gm velchi @ 40 rs, 250gm tea @ 110 rs, 500gm sugar @ 30 rs).
     // Amount is 110 rs. Rate is per-kg rate ((price / qty) * 1000) so standard cart math works seamlessly.
-    if ((unit === 'gm' || unit === 'g') && qty >= 20) {
+    if ((unit === 'gm' || unit === 'g') && qty >= 5 && priceVal >= 20) {
       amount = priceVal;
       rate = parseFloat(((priceVal / qty) * 1000).toFixed(2));
     }
