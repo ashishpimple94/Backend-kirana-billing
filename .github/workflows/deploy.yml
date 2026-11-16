@@ -10,8 +10,8 @@ on:
 env:
   AWS_REGION: ap-south-1 # Mumbai (India)
   ECR_REPOSITORY: kirana-billing-backend
-  ECS_CLUSTER: kirana-cluster
-  ECS_SERVICE: kirana-backend-service
+  ECS_CLUSTER: default
+  ECS_SERVICE: kirana-billing-backend-7a1e
 
 jobs:
   # ==========================================
