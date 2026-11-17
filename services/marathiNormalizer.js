@@ -59,8 +59,138 @@ const THOUSAND_MULTIPLIERS = {
   'eleven': 11, 'twelve': 12, 'fifteen': 15, 'twenty': 20, 'twenty-five': 25, 'thirty': 30, 'forty': 40, 'fifty': 50,
 };
 
+// Convert Marathi bill amounts into spoken Roman Marathi words according to user specification
+const MARATHI_UNITS_1_TO_99 = {
+  1: 'ek', 2: 'don', 3: 'teen', 4: 'chaar', 5: 'paach', 6: 'saha', 7: 'saat', 8: 'aath', 9: 'nau', 10: 'daha',
+  11: 'akara', 12: 'baara', 13: 'tera', 14: 'chauda', 15: 'pandhra', 16: 'sola', 17: 'satra', 18: 'athra', 19: 'ekonis',
+  20: 'vees', 21: 'ekvees', 22: 'baavees', 23: 'tevees', 24: 'chovees', 25: 'panchvees', 26: 'savvees', 27: 'sattavees', 28: 'atthaavees', 29: 'ekontees',
+  30: 'tees', 31: 'ektees', 32: 'battees', 33: 'tehtees', 34: 'chautees', 35: 'pastees', 36: 'chhattees', 37: 'sadtees', 38: 'adtees', 39: 'ekonchalis',
+  40: 'chalis', 41: 'ekechalis', 42: 'bechalis', 43: 'trechalis', 44: 'chavvechalis', 45: 'panchechalis', 46: 'shehechalis', 47: 'sattechalis', 48: 'atthechalis', 49: 'ekonpannas',
+  50: 'pannas', 51: 'ekaavanna', 52: 'baavanna', 53: 'trepanna', 54: 'chopanna', 55: 'panchaavanna', 56: 'chhappanna', 57: 'sattaavanna', 58: 'atthaavanna', 59: 'ekonsaath',
+  60: 'saath', 61: 'eksashta', 62: 'baasashta', 63: 'tresashta', 64: 'chausashta', 65: 'paasashta', 66: 'shaasashta', 67: 'sadsashta', 68: 'adushta', 69: 'ekonsattar',
+  70: 'sattar', 71: 'ekaahattar', 72: 'bahaattar', 73: 'tryaahattar', 74: 'chauryaahattar', 75: 'panchaahattar', 76: 'shahaattar', 77: 'satyaahattar', 78: 'atthaahattar', 79: 'ekonaainshi',
+  80: 'aainshi', 81: 'ekyaainshi', 82: 'byaainshi', 83: 'tryaainshi', 84: 'chauryaainshi', 85: 'panchyaainshi', 86: 'shahaainshi', 87: 'satyaainshi', 88: 'atthyaainshi', 89: 'ekonnavvad',
+  90: 'navvad', 91: 'ekyaannav', 92: 'byaannav', 93: 'tryaannav', 94: 'chauryaannav', 95: 'panchyaannav', 96: 'shahaannav', 97: 'satyaannav', 98: 'atthyaannav', 99: 'navvyaannav'
+};
+
+const MARATHI_HUNDREDS_WORDS = {
+  100: 'ekshey', 200: 'donshey', 300: 'teenshey', 400: 'chaarshey', 500: 'pachshey',
+  600: 'sahashey', 700: 'satshey', 800: 'aathshey', 900: 'naushey'
+};
+
+function numberToMarathiWords(n) {
+  if (n <= 0) return 'shunya';
+  if (n <= 99) return MARATHI_UNITS_1_TO_99[n] || String(n);
+
+  const parts = [];
+  let rem = n;
+
+  // Thousands (e.g. 1000 = ek hazaar, 2000 = don hazaar, 2890 = don hazaar aathshey navvad, 10000 = daha hazaar)
+  if (rem >= 1000) {
+    const thou = Math.floor(rem / 1000);
+    rem = rem % 1000;
+    const thouWord = MARATHI_UNITS_1_TO_99[thou] || String(thou);
+    parts.push(thouWord + ' hazaar');
+  }
+
+  // Hundreds (e.g. 700 = satshey, 100 = ekshey)
+  if (rem >= 100) {
+    const hund = Math.floor(rem / 100) * 100;
+    rem = rem % 100;
+    if (MARATHI_HUNDREDS_WORDS[hund]) {
+      parts.push(MARATHI_HUNDREDS_WORDS[hund]);
+    }
+  }
+
+  // Remainder 1-99
+  if (rem > 0) {
+    if (MARATHI_UNITS_1_TO_99[rem]) {
+      parts.push(MARATHI_UNITS_1_TO_99[rem]);
+    }
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Converts a bill line into spoken Marathi words (Roman):
+ * Input:  <Item Name> <MRP>/- <Amount in rupees>
+ * Output: <Item Name> <MRP>/- <Amount in Marathi words (Roman)> rupaye <Amount in digits>
+ * Example: Patanjali biscuit box 10/- 710 -> Patanjali biscuit box 10/- satshey daha rupaye 710
+ */
+function convertBillLineToMarathiSpeech(line) {
+  if (!line || typeof line !== 'string') return '';
+  const trimmed = line.trim();
+  // Match: <Item Name> <MRP>/- <Amount> OR <Item Name> <Amount>
+  const match = trimmed.match(/^(.*?)(?:(\d+\s*\/-)\s+)?(\d+)$/);
+  if (!match) return trimmed;
+  const prefix = (match[1] || '').trim();
+  const mrp = match[2] ? match[2].trim() : '';
+  const amount = parseInt(match[3], 10);
+  const words = numberToMarathiWords(amount);
+  const parts = [];
+  if (prefix) parts.push(prefix);
+  if (mrp) parts.push(mrp);
+  parts.push(`${words} rupaye ${amount}`);
+  return parts.join(' ');
+}
+
 // 2. Comprehensive Marathi & Indian Number Words (Hundreds, Compounds, Tens, Units, Fractions)
 const HUNDREDS_MAP = {
+  // English Colloquial Hundreds (120, 130, 140, 160, 260, 460, 660, 560, 770, 380, 280, 450, 700, 230, 1140, 1200)
+  'one twenty': 120, 'one-twenty': 120, 'one hundred twenty': 120, 'one hundred and twenty': 120,
+  'one thirty': 130, 'one-thirty': 130, 'one hundred thirty': 130, 'one hundred and thirty': 130,
+  'one forty': 140, 'one-forty': 140, 'one hundred forty': 140, 'one hundred and forty': 140,
+  'one fifty': 150, 'one-fifty': 150, 'one hundred fifty': 150, 'one hundred and fifty': 150,
+  'one sixty': 160, 'one-sixty': 160, 'one hundred sixty': 160, 'one hundred and sixty': 160,
+  'one seventy': 170, 'one-seventy': 170, 'one hundred seventy': 170, 'one hundred and seventy': 170,
+  'one eighty': 180, 'one-eighty': 180, 'one hundred eighty': 180, 'one hundred and eighty': 180,
+  'one ninety': 190, 'one-ninety': 190, 'one hundred ninety': 190, 'one hundred and ninety': 190,
+
+  'two twenty': 220, 'two-twenty': 220, 'two hundred twenty': 220, 'two hundred and twenty': 220,
+  'two thirty': 230, 'two-thirty': 230, 'two hundred thirty': 230, 'two hundred and thirty': 230,
+  'two forty': 240, 'two-forty': 240, 'two hundred forty': 240, 'two hundred and forty': 240,
+  'two fifty': 250, 'two-fifty': 250, 'two hundred fifty': 250, 'two hundred and fifty': 250,
+  'two sixty': 260, 'two-sixty': 260, 'two hundred sixty': 260, 'two hundred and sixty': 260,
+  'two seventy': 270, 'two-seventy': 270, 'two hundred seventy': 270, 'two hundred and seventy': 270,
+  'two eighty': 280, 'two-eighty': 280, 'two hundred eighty': 280, 'two hundred and eighty': 280,
+  'two ninety': 290, 'two-ninety': 290, 'two hundred ninety': 290, 'two hundred and ninety': 290,
+
+  'three twenty': 320, 'three-twenty': 320, 'three hundred twenty': 320, 'three hundred and twenty': 320,
+  'three thirty': 330, 'three-thirty': 330, 'three hundred thirty': 330, 'three hundred and thirty': 330,
+  'three forty': 340, 'three-forty': 340, 'three hundred forty': 340, 'three hundred and forty': 340,
+  'three fifty': 350, 'three-fifty': 350, 'three hundred fifty': 350, 'three hundred and fifty': 350,
+  'three sixty': 360, 'three-sixty': 360, 'three hundred sixty': 360, 'three hundred and sixty': 360,
+  'three seventy': 370, 'three-seventy': 370, 'three hundred seventy': 370, 'three hundred and seventy': 370,
+  'three eighty': 380, 'three-eighty': 380, 'three hundred eighty': 380, 'three hundred and eighty': 380,
+  'three ninety': 390, 'three-ninety': 390, 'three hundred ninety': 390, 'three hundred and ninety': 390,
+
+  'four twenty': 420, 'four-twenty': 420, 'four hundred twenty': 420, 'four hundred and twenty': 420,
+  'four thirty': 430, 'four-thirty': 430, 'four hundred thirty': 430, 'four hundred and thirty': 430,
+  'four forty': 440, 'four-forty': 440, 'four hundred forty': 440, 'four hundred and forty': 440,
+  'four fifty': 450, 'four-fifty': 450, 'four hundred fifty': 450, 'four hundred and fifty': 450,
+  'four sixty': 460, 'four-sixty': 460, 'four hundred sixty': 460, 'four hundred and sixty': 460,
+  'four seventy': 470, 'four-seventy': 470, 'four hundred seventy': 470, 'four hundred and seventy': 470,
+  'four eighty': 480, 'four-eighty': 480, 'four hundred eighty': 480, 'four hundred and eighty': 480,
+  'four ninety': 490, 'four-ninety': 490, 'four hundred ninety': 490, 'four hundred and ninety': 490,
+
+  'five twenty': 520, 'five-twenty': 520, 'five hundred twenty': 520, 'five hundred and twenty': 520,
+  'five thirty': 530, 'five-thirty': 530, 'five hundred thirty': 530, 'five hundred and thirty': 530,
+  'five forty': 540, 'five-forty': 540, 'five hundred forty': 540, 'five hundred and forty': 540,
+  'five fifty': 550, 'five-fifty': 550, 'five hundred fifty': 550, 'five hundred and fifty': 550,
+  'five sixty': 560, 'five-sixty': 560, 'five hundred sixty': 560, 'five hundred and sixty': 560,
+  'five seventy': 570, 'five-seventy': 570, 'five hundred seventy': 570, 'five hundred and seventy': 570,
+  'five eighty': 580, 'five-eighty': 580, 'five hundred eighty': 580, 'five hundred and eighty': 580,
+  'five ninety': 590, 'five-ninety': 590, 'five hundred ninety': 590, 'five hundred and ninety': 590,
+
+  'six sixty': 660, 'six-sixty': 660, 'six hundred sixty': 660, 'six hundred and sixty': 660,
+  'seven seventy': 770, 'seven-seventy': 770, 'seven hundred seventy': 770, 'seven hundred and seventy': 770,
+  'eight eighty': 880, 'eight-eighty': 880, 'eight hundred eighty': 880, 'eight hundred and eighty': 880,
+  'nine ninety': 990, 'nine-ninety': 990, 'nine hundred ninety': 990, 'nine hundred and ninety': 990,
+
+  'eleven forty': 1140, 'eleven-forty': 1140, 'eleven hundred forty': 1140, 'one thousand one hundred forty': 1140,
+  'twelve hundred': 1200, 'twelve-hundred': 1200, 'one thousand two hundred': 1200,
+  'fifteen hundred': 1500, 'fifteen-hundred': 1500, 'one thousand five hundred': 1500,
   // 135 Compounds
   'एकशे पस्तीस': 135, 'एकशेपस्तीस': 135, 'एकशे पैंतीस': 135, 'एकशेपंतीस': 135, 'एकसे पस्तीस': 135, 'एकसेपस्तीस': 135, 'एकसे पैंतीस': 135, 'एक शे पस्तीस': 135, 'एक से पस्तीस': 135, 'ekshe pastis': 135, 'ekse pastis': 135, 'ek she pastis': 135, 'ek se pastis': 135, 'ekshe paintis': 135, 'ekse paintis': 135, 'ek she paintis': 135, 'ek se paintis': 135, 'one thirty five': 135, 'one thirty-five': 135,
 
@@ -616,6 +746,8 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN', outputLang = null
 }
 
 module.exports = {
+  numberToMarathiWords,
+  convertBillLineToMarathiSpeech,
   devanagariToLatin,
   deduplicateSpokenTokens,
   convertIndicScriptToDevanagari,

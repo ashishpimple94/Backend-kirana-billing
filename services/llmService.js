@@ -44,33 +44,42 @@ CRITICAL RULES:
 3. MARATHI NUMBERS, HUNDREDS & COMPOUNDS (CRITICAL):
 - Single numbers: एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, पस्तीस=35, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90.
 - Hundreds: शंभर/एकशे/एकसे=100, दोनशे/दोनसे=200, तीनशे/तीनसे=300, चारशे/चारसे=400, पाचशे/पाचसे=500, सहाशे/सहासे=600, सातशे/सातसे=700, आठशे/आठसे=800, नऊशे/नऊसे/नवशे=900, एक हजार=1000.
-- Thousands & Lakhs (Scalable Compound Numbers):
-  - "पाच हजार" / "pach hajar" / "panch hazar" / "5 hajar" = 5000
-  - "दहा हजार" / "daha hajar" / "das hazar" = 10000
-  - "दोन हजार दोनशे वीस" / "don hajar donshe vees" = 2220
-  - "दोन हजार दोनशे तीस" / "don hajar donshe tees" = 2230
-  - "एक हजार पाचशे" / "दीड हजार" = 1500
-  - "अडीच हजार" = 2500
-  - "एक लाख" = 100000
-- Colloquial half-hundreds & regional accents:
-  - "एकशे पस्तीस" / "एकसे पस्तीस" / "ekshe pastis" / "ekse pastis" / "ek she pastis" = 135
-  - "एकशे चाळीस" / "एकसे चाळीस" / "ekshe chalis" / "ekse chalis" / "ek she chalis" = 140
-  - "एकशे नव्वद" / "एकसे नव्वद" / "ekshe navvad" / "ekse navvad" / "ek she navvad" = 190
-  - "पाचशे पन्नास" / "साडेपाचशे" / "साडे पाचशे" / "sade pacahshe" / "sade pachshe" / "pachse pannas" = 550
-  - "नऊशे ऐंशी" / "नऊशे ऐशी" / "नऊसे ऐंशी" / "naushe ayshi" / "navshe aishi" / "nawshe ayshi" = 980
-  - साडेसहाशे=650, साडेसातशे=750, साडेआठशे=850, साडेनऊशे=950, अडीचशे=250, दीडशे=150, सव्वाशे=125.
-- Compound hundreds & prices (MUST align exactly with spoken price!):
-  "एकशे पस्तीस" = 135
-  "एकशे चाळीस" = 140
-  "एकशे नव्वद" = 190
-  "एकशे दहा" = 110
-  "एकशे आठ" = 108
-  "पाचशे अडुसष्ट" / "पाचशे अडसठ" = 568
-  "सातशे एकोणनव्वद" = 789
-  "पाचशे पन्नास" / "साडेपाचशे" = 550
-  "पाचशे" = 500
-  "नऊशे" = 900
-  "साठ" = 60, "पन्नास" = 50, "नव्वद" = 90, "ऐंशी" = 80, "चाळीस" = 40, "दहा" = 10, "पाच" = 5.
+- Thousands (Scalable Compound Numbers 1 to 5000):
+  - "पाच हजार" / "pach hajar" / "panch hazar" / "5 hajar" / "five thousand" = 5000
+  - "दोन हजार पाचशे" / "अडीच हजार" / "two thousand five hundred" = 2500
+  - "दोन हजार" / "two thousand" = 2000
+  - "एक हजार पाचशे" / "दीड हजार" / "fifteen hundred" = 1500
+  - "एक हजार दोनशे" / "बाराशे" / "twelve hundred" = 1200
+  - "एक हजार एकशे चाळीस" / "अकराशे चाळीस" / "eleven forty" = 1140
+  - "एक हजार" / "one thousand" = 1000
+  - STRICT GUARD: Kirana retail billing prices are strictly between 1 to 5000 rupees. NEVER hallucinate 100000 (one lakh) or large numbers! Words like "लाव", "टाक", "द्या", "लागतील" or brands like "लक्स" (Lux) must NEVER be mistaken for "लाख" or 100000.
+- Compound hundreds & prices across Marathi, Hindi & English (1 to 5000):
+  - 120: "एकशे वीस" / "ekshe vees" / "ek sau bees" / "one twenty" = 120
+  - 130: "एकशे तीस" / "ekshe tees" / "ek sau tees" / "one thirty" = 130
+  - 140: "एकशे चाळीस" / "ekshe chalis" / "ek sau chalis" / "one forty" = 140
+  - 160: "एकशे साठ" / "ekshe saath" / "ek sau saath" / "one sixty" = 160
+  - 230: "दोनशे तीस" / "donshey tees" / "do sau tees" / "two thirty" = 230
+  - 260: "दोनशे साठ" / "donshey saath" / "do sau saath" / "two sixty" = 260
+  - 280: "दोनशे ऐंशी" / "donshey aainshi" / "do sau assi" / "two eighty" = 280
+  - 380: "तीनशे ऐंशी" / "teenshey aainshi" / "teen sau assi" / "three eighty" = 380
+  - 450: "चारशे पन्नास" / "साडेचारशे" / "char sau pachas" / "four fifty" = 450
+  - 460: "चारशे साठ" / "chaarshey saath" / "char sau saath" / "four sixty" = 460
+  - 560: "पाचशे साठ" / "pachshey saath" / "paanch sau saath" / "five sixty" = 560
+  - 660: "सहाशे साठ" / "sahashey saath" / "chhe sau saath" / "six sixty" = 660
+  - 700: "सातशे" / "satshey" / "saat sau" / "seven hundred" = 700
+  - 770: "सातशे सत्तर" / "satshey sattar" / "saat sau sattar" / "seven seventy" = 770
+  - 1140: "अकराशे चाळीस" / "akrashe chalis" / "eleven forty" = 1140
+  - 1200: "बाराशे" / "barashe" / "barah sau" / "twelve hundred" = 1200
+  - 1250: "बाराशे पन्नास" / "barashe pannas" = 1250
+  - 1500: "पंधराशे" / "दीड हजार" = 1500
+  - "एकशे पस्तीस" = 135
+  - "एकशे नव्वद" = 190
+  - "एकशे दहा" = 110
+  - "पाचशे अडुसष्ट" = 568
+  - "सातशे एकोणनव्वद" = 789
+  - "पाचशे पन्नास" / "साडेपाचशे" = 550
+  - "नऊशे ऐंशी" = 980
+  - "साठ" = 60, "पन्नास" = 50, "नव्वद" = 90, "ऐंशी" = 80, "चाळीस" = 40, "तीस" = 30, "वीस" = 20, "दहा" = 10, "पाच" = 5.
 
 4. EXACT NUMBER & PRICING ALIGNMENT:
 - Extract the exact numbers spoken.
@@ -230,10 +239,8 @@ function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN', out
 
     // Guardrail: Price validation & clamping (reject hallucinated 100000+ amounts)
     let price = parseFloat(item.price || item.rate || 0);
-    if (isNaN(price) || price < 0 || price >= 100000) {
+    if (isNaN(price) || price < 0 || price >= 15000) {
       price = 0;
-    } else if (price > 50000) {
-      price = 50000;
     }
 
     const unit = canonicalizeUnit(item.unit);

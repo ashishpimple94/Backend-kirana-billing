@@ -1,6 +1,7 @@
 const {
   normalizeMarathiTranscript,
   canonicalizeMarathiItemName,
+  parseMarathiSpokenNumbers,
 } = require('./marathiNormalizer');
 
 const NUMBER_WORDS_MAP = {
@@ -105,17 +106,26 @@ function parseBillWithRegex(transcript, options = {}) {
   const outputLang = options.outputLang || null;
   if (!transcript || !transcript.trim()) return [];
 
-  let text = normalizeMarathiTranscript(transcript);
+  // 1. First parse spoken numbers (Marathi, Hindi, English compound numbers) into digits
+  let text = parseMarathiSpokenNumbers(transcript);
+  text = normalizeMarathiTranscript(text);
   text = normalizeNumberWords(text);
   text = text.replace(/[,;+\n]+/g, ' , ');
   text = text.replace(/\b(and|aur|ani|va|then|next|after that)\b/gi, ' , ');
 
   const unitListStr = Object.keys(UNIT_MAP).sort((a, b) => b.length - a.length).join('|');
   text = text.replace(new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${unitListStr})`, 'gi'), '$1 $2');
-  text = text.replace(/(\d+(?:\.\d+)?)\s*(rs|rupees|rupaye|rupay|रुपये|रुपया|रू|₹|\/-)/gi, '$1 rs');
+  text = text.replace(/(\d+(?:\.\d+)?)\s*(rs|rupees|rupaye|rupay|रुपये|रुपया|रू|₹)(?=[^\w]|$)/gi, '$1 rs');
 
   const unitRegex = `(?:${unitListStr})`;
-  const currRegex = `(?:rs|rupees|rupaye|rupay|रुपये|रुपया|रू|₹|\\/-)`;
+  const currRegex = `(?:rs|rupees|rupaye|rupay|रुपये|रुपया|रू|₹)`;
+
+  // Pattern MRP: <name> <MRP>/- [optional spoken words/rupaye] <Amount>
+  // e.g. "Patanjali biscuit box 10/- 710", "Sakhar 10/- 120", "Besan 10/- 130"
+  const patternMRP = new RegExp(
+    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+\\s*\\/-)\\s*(?:[A-Za-z\\u0900-\\u097F\\s]+)?\\s*(\\d+(?:\\.\\d+)?)(?:\\s*${currRegex})?(?=[,\\s;+]|$)`,
+    'gi'
+  );
 
   // Pattern A: <name> <qty> <unit> <price> (optional rs)
   const patternA = new RegExp(
@@ -147,25 +157,37 @@ function parseBillWithRegex(transcript, options = {}) {
     'gi'
   );
 
+  // Pattern Bare: <name> <price> (e.g. "Sakhar 120", "Besan 130", "Moong Dal 260")
+  // Matches any known or alphabetic item name followed by a realistic grocery price (5 to 5000)
+  const patternBare = new RegExp(
+    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]{1,30}?)\\s+(\\d{2,4})(?=[,\\s;+]|$)`,
+    'gi'
+  );
+
   const matchedSpans = [];
-``
+
   const addMatch = (start, end, rawName, rawQty, rawUnit, rawPrice) => {
     const overlaps = matchedSpans.some(
       (s) => (start >= s.start && start < s.end) || (end > s.start && end <= s.end)
     );
     if (overlaps) return;
 
+    // Safety guardrail: reject hallucinated 100000+ amounts
+    if (rawPrice >= 100000 || rawPrice > 15000) {
+      return;
+    }
+
     const qty = isNaN(rawQty) || rawQty <= 0 ? 1 : rawQty;
     const unit = UNIT_MAP[rawUnit.toLowerCase()] || rawUnit.toLowerCase();
     const cleanName = normalizeName(rawName.replace(/^[,\s]+|[,\s]+$/g, ''), language, outputLang);
+    if (!cleanName || /^[\d\s.,;+!?-]+$/.test(cleanName)) return;
+
     const priceVal = isNaN(rawPrice) || rawPrice < 0 ? 0 : rawPrice;
 
     let rate = priceMode === 'line_total' && qty > 0 ? parseFloat((priceVal / qty).toFixed(2)) : priceVal;
     let amount = Math.round(rate * qty * 100) / 100;
 
     // Handle grams (10gm / 1 tola, 250gm, 500gm, 100gm, etc.):
-    // Spoken price is the price for that weight portion (e.g. 10gm velchi @ 40 rs, 250gm tea @ 110 rs, 500gm sugar @ 30 rs).
-    // Amount is 110 rs. Rate is per-kg rate ((price / qty) * 1000) so standard cart math works seamlessly.
     if ((unit === 'gm' || unit === 'g') && qty >= 5 && priceVal >= 20) {
       amount = priceVal;
       rate = parseFloat(((priceVal / qty) * 1000).toFixed(2));
@@ -185,6 +207,12 @@ function parseBillWithRegex(transcript, options = {}) {
     });
   };
 
+  // 1. MRP Pattern First (so MRP 10/- does not steal the price from 710)
+  for (const m of text.matchAll(patternMRP)) {
+    addMatch(m.index, m.index + m[0].length, `${m[1]} ${m[2]}`, 1, 'packet', parseFloat(m[3]));
+  }
+
+  // 2. Pattern A, B, E (Explicit quantity + unit + price)
   for (const m of text.matchAll(patternA)) {
     addMatch(m.index, m.index + m[0].length, m[1], parseFloat(m[2]), m[3], parseFloat(m[4]));
   }
@@ -203,6 +231,35 @@ function parseBillWithRegex(transcript, options = {}) {
 
   for (const m of text.matchAll(patternC)) {
     addMatch(m.index, m.index + m[0].length, m[1], 1, 'packet', parseFloat(m[2]));
+  }
+
+  // 3. Pattern Bare (<name> <price> e.g. "Sakhar 120", "Besan 130")
+  for (const m of text.matchAll(patternBare)) {
+    const p = parseFloat(m[2]);
+    if (p >= 5 && p <= 5000) {
+      addMatch(m.index, m.index + m[0].length, m[1], 1, 'packet', p);
+    }
+  }
+
+  // Pattern NoPriceA: <name> <qty> <unit> (no price)
+  const patternNoPriceA = new RegExp(
+    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})(?!\\s*\\d+)`,
+    'gi'
+  );
+
+  // Pattern NoPriceB: <qty> <unit> <name> (no price)
+  const patternNoPriceB = new RegExp(
+    `(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)(?=[,;+\\n]|$)`,
+    'gi'
+  );
+
+  // 4. Pattern NoPrice (items with quantity & unit but no spoken price)
+  for (const m of text.matchAll(patternNoPriceA)) {
+    addMatch(m.index, m.index + m[0].length, m[1], parseFloat(m[2]), m[3], 0);
+  }
+
+  for (const m of text.matchAll(patternNoPriceB)) {
+    addMatch(m.index, m.index + m[0].length, m[3], parseFloat(m[1]), m[2], 0);
   }
 
   matchedSpans.sort((a, b) => a.start - b.start);
