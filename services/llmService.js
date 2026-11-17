@@ -228,12 +228,12 @@ function sanitizeItems(rawItems, priceMode = 'per_unit', language = 'mr-IN', out
       quantity = 10000;
     }
 
-    // Guardrail: Price validation & clamping
+    // Guardrail: Price validation & clamping (reject hallucinated 100000+ amounts)
     let price = parseFloat(item.price || item.rate || 0);
-    if (isNaN(price) || price < 0) {
+    if (isNaN(price) || price < 0 || price >= 100000) {
       price = 0;
-    } else if (price > 1000000) {
-      price = 1000000;
+    } else if (price > 50000) {
+      price = 50000;
     }
 
     const unit = canonicalizeUnit(item.unit);

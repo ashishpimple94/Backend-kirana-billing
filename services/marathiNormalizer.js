@@ -105,16 +105,26 @@ const HUNDREDS_MAP = {
   'सव्वाशे': 125, 'savvashe': 125,
 
   // Marathi, Hindi & English Hundreds (including colloquial 's' and spaced accents)
-  'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'एकसे': 100, 'ekse': 100, 'ekase': 100, 'eksey': 100, 'एक शे': 100, 'एक से': 100, 'ek she': 100, 'ek se': 100, 'एक सौ': 100, 'एकसौ': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
-  'दोनशे': 200, 'दोंशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'दोनसे': 200, 'दोंसे': 200, 'donse': 200, 'donase': 200, 'donsey': 200, 'दोन शे': 200, 'दोन से': 200, 'don she': 200, 'don se': 200, 'दो सौ': 200, 'दोसौ': 200, 'do sau': 200, 'two hundred': 200,
-  'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'तीनसे': 300, 'teense': 300, 'teenase': 300, 'teensey': 300, 'तीन शे': 300, 'तीन से': 300, 'teen she': 300, 'teen se': 300, 'तीन सौ': 300, 'तीनसौ': 300, 'teen sau': 300, 'three hundred': 300,
-  'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'चारसे': 400, 'charse': 400, 'charase': 400, 'charsey': 400, 'चार शे': 400, 'चार से': 400, 'char she': 400, 'char se': 400, 'चार सौ': 400, 'चारसौ': 400, 'char sau': 400, 'chaar sau': 400, 'four hundred': 400,
-  'पाचशे': 500, 'पाचसे': 500, 'pachshe': 500, 'pachse': 500, 'paachshe': 500, 'paachse': 500, 'pachashe': 500, 'pachase': 500, 'paachashe': 500, 'paachase': 500, 'pachashey': 500, 'pachshey': 500, 'पाच शे': 500, 'पाच से': 500, 'pach she': 500, 'pach se': 500, 'पाँच सौ': 500, 'पाँचसौ': 500, 'पांच सौ': 500, 'पांचसौ': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
-  'सहाशे': 600, 'सहासे': 600, 'sahashe': 600, 'sahase': 600, 'sahashey': 600, 'सहा शे': 600, 'सहा से': 600, 'saha she': 600, 'saha se': 600, 'छह सौ': 600, 'छहसौ': 600, 'chha sau': 600, 'chheh sau': 600, 'six hundred': 600,
-  'सातशे': 700, 'सातसे': 700, 'saatshe': 700, 'saatse': 700, 'satse': 700, 'saatashe': 700, 'saatase': 700, 'saatshey': 700, 'सात शे': 700, 'सात से': 700, 'saat she': 700, 'saat se': 700, 'sat she': 700, 'sat se': 700, 'सात सौ': 700, 'सातसौ': 700, 'saat sau': 700, 'sat sau': 700, 'seven hundred': 700,
-  'आठशे': 800, 'आठसे': 800, 'aathshe': 800, 'aathse': 800, 'athse': 800, 'aathashe': 800, 'aathase': 800, 'aathshey': 800, 'आठ शे': 800, 'आठ से': 800, 'aath she': 800, 'aath se': 800, 'ath she': 800, 'ath se': 800, 'आठ सौ': 800, 'आठसौ': 800, 'aath sau': 800, 'ath sau': 800, 'eight hundred': 800,
-  'नऊशे': 900, 'नऊसे': 900, 'नवशे': 900, 'नवसे': 900, 'naushe': 900, 'nause': 900, 'navshe': 900, 'navse': 900, 'nawshe': 900, 'nawse': 900, 'nauashe': 900, 'naushey': 900, 'नऊ शे': 900, 'नऊ से': 900, 'nau she': 900, 'nau se': 900, 'nav she': 900, 'nav se': 900, 'नौ सौ': 900, 'नौसौ': 900, 'nau sau': 900, 'nine hundred': 900,
+  'एकशे': 100, 'ekshe': 100, 'ekashe': 100, 'ekshey': 100, 'एकसे': 100, 'ekse': 100, 'ekase': 100, 'eksey': 100, 'एक शे': 100, 'एक से': 100, 'ek she': 100, 'ek se': 100, 'ek shey': 100, 'एक सौ': 100, 'एकसौ': 100, 'ek sau': 100, 'one hundred': 100, 'शंभर': 100, 'shambhar': 100,
+  'दोनशे': 200, 'दोंशे': 200, 'donshe': 200, 'donashe': 200, 'donshey': 200, 'दोनसे': 200, 'दोंसे': 200, 'donse': 200, 'donase': 200, 'donsey': 200, 'दोन शे': 200, 'दोन से': 200, 'don she': 200, 'don se': 200, 'don shey': 200, 'दो सौ': 200, 'दोसौ': 200, 'do sau': 200, 'two hundred': 200,
+  'तीनशे': 300, 'teenshe': 300, 'teenashe': 300, 'teenshey': 300, 'तीनसे': 300, 'teense': 300, 'teenase': 300, 'teensey': 300, 'तीन शे': 300, 'तीन से': 300, 'teen she': 300, 'teen se': 300, 'teen shey': 300, 'तीन सौ': 300, 'तीनसौ': 300, 'teen sau': 300, 'three hundred': 300,
+  'चारशे': 400, 'charshe': 400, 'charashe': 400, 'charshey': 400, 'chaarshe': 400, 'chaarshey': 400, 'चारसे': 400, 'charse': 400, 'charase': 400, 'charsey': 400, 'चार शे': 400, 'चार से': 400, 'char she': 400, 'char se': 400, 'chaar she': 400, 'chaar shey': 400, 'चार सौ': 400, 'चारसौ': 400, 'char sau': 400, 'chaar sau': 400, 'four hundred': 400,
+  'पाचशे': 500, 'पाचसे': 500, 'pachshe': 500, 'pachse': 500, 'paachshe': 500, 'paachse': 500, 'pachashe': 500, 'pachase': 500, 'paachashe': 500, 'paachase': 500, 'pachashey': 500, 'pachshey': 500, 'पाच शे': 500, 'पाच से': 500, 'pach she': 500, 'pach se': 500, 'pach shey': 500, 'पाँच सौ': 500, 'पाँचसौ': 500, 'पांच सौ': 500, 'पांचसौ': 500, 'paanch sau': 500, 'panch sau': 500, 'five hundred': 500,
+  'सहाशे': 600, 'सहासे': 600, 'sahashe': 600, 'sahase': 600, 'sahashey': 600, 'सहा शे': 600, 'सहा से': 600, 'saha she': 600, 'saha se': 600, 'saha shey': 600, 'छह सौ': 600, 'छहसौ': 600, 'chha sau': 600, 'chheh sau': 600, 'six hundred': 600,
+  'सातशे': 700, 'सातसे': 700, 'satshey': 700, 'satshe': 700, 'saatshe': 700, 'saatse': 700, 'satse': 700, 'saatashe': 700, 'saatase': 700, 'saatshey': 700, 'सात शे': 700, 'सात से': 700, 'sat shey': 700, 'saat she': 700, 'saat se': 700, 'sat she': 700, 'sat se': 700, 'सात सौ': 700, 'सातसौ': 700, 'saat sau': 700, 'sat sau': 700, 'seven hundred': 700,
+  'आठशे': 800, 'आठसे': 800, 'aathshe': 800, 'aathse': 800, 'athse': 800, 'aathashe': 800, 'aathase': 800, 'aathshey': 800, 'आठ शे': 800, 'आठ से': 800, 'aath she': 800, 'aath se': 800, 'aath shey': 800, 'ath she': 800, 'ath se': 800, 'आठ सौ': 800, 'आठसौ': 800, 'aath sau': 800, 'ath sau': 800, 'eight hundred': 800,
+  'नऊशे': 900, 'नऊसे': 900, 'नवशे': 900, 'नवसे': 900, 'naushe': 900, 'nause': 900, 'navshe': 900, 'navse': 900, 'nawshe': 900, 'nawse': 900, 'nauashe': 900, 'naushey': 900, 'नऊ शे': 900, 'नऊ से': 900, 'nau she': 900, 'nau se': 900, 'nau shey': 900, 'nav she': 900, 'nav se': 900, 'नौ सौ': 900, 'नौसौ': 900, 'nau sau': 900, 'nine hundred': 900,
   'हजार': 1000, 'हज़ार': 1000, 'hajar': 1000, 'hazar': 1000, 'hazaar': 1000, 'ek hazar': 1000, 'ek hajar': 1000, 'एक हजार': 1000, 'one thousand': 1000,
+  // 1100 to 1900 Hundreds (Essential for spoken Kirana billing e.g. 1140 = अकराशे चाळीस, 1200 = बाराशे)
+  'अकराशे': 1100, 'अकरासे': 1100, 'akrashe': 1100, 'akrashey': 1100, 'अकरा शे': 1100, 'अकरा से': 1100, 'akra she': 1100, 'akra shey': 1100, 'अकरा सौ': 1100, 'gyarah sau': 1100,
+  'बाराशे': 1200, 'बारासे': 1200, 'barashe': 1200, 'barashey': 1200, 'baarashe': 1200, 'baarashey': 1200, 'बारा शे': 1200, 'बारा से': 1200, 'bara she': 1200, 'bara shey': 1200, 'baara she': 1200, 'baara shey': 1200, 'बारा सौ': 1200, 'barah sau': 1200,
+  'तेराशे': 1300, 'तेरासे': 1300, 'terashe': 1300, 'terashey': 1300, 'तेरा शे': 1300, 'तेरा से': 1300, 'tera she': 1300, 'tera shey': 1300, 'तेरा सौ': 1300, 'terah sau': 1300,
+  'चौदाशे': 1400, 'चौदासे': 1400, 'chaudashe': 1400, 'chaudashey': 1400, 'चौदा शे': 1400, 'चौदा से': 1400, 'chauda she': 1400, 'chauda shey': 1400, 'चौदा सौ': 1400, 'chaudah sau': 1400,
+  'पंधराशे': 1500, 'पंधरासे': 1500, 'pandhrashe': 1500, 'pandhrashey': 1500, 'पंधरा शे': 1500, 'पंधरा से': 1500, 'pandhra she': 1500, 'pandhra shey': 1500, 'पंधरा सौ': 1500, 'pandrah sau': 1500,
+  'सोळाशे': 1600, 'सोळासे': 1600, 'solashe': 1600, 'solashey': 1600, 'सोळा शे': 1600, 'सोळा से': 1600, 'sola she': 1600, 'sola shey': 1600, 'सोला सौ': 1600, 'solah sau': 1600,
+  'सतराशे': 1700, 'सतरासे': 1700, 'satrashe': 1700, 'satrashey': 1700, 'सतरा शे': 1700, 'सतरा से': 1700, 'satra she': 1700, 'satra shey': 1700, 'सतरा सौ': 1700, 'satrah sau': 1700,
+  'अठराशे': 1800, 'अठरासे': 1800, 'athrashe': 1800, 'athrashey': 1800, 'अठरा शे': 1800, 'अठरा से': 1800, 'athra she': 1800, 'athra shey': 1800, 'अठरा सौ': 1800, 'athrah sau': 1800,
+  'एकोणीसशे': 1900, 'एकोणीससे': 1900, 'ekonisshe': 1900, 'ekonisshey': 1900, 'एकोणीस शे': 1900, 'एकोणीस सौ': 1900, 'unnis sau': 1900,
 };
 
 const UNITS_AND_TENS_MAP = {
@@ -126,9 +136,9 @@ const UNITS_AND_TENS_MAP = {
   // 80s
   'एक्याऐंशी': 81, 'ब्याऐंशी': 82, 'त्र्याऐंशी': 83, 'चौऱ्याऐंशी': 84,
   'पंच्याऐंशी': 85, 'पंचाइश': 85, 'पंचाईश': 85, 'पंचाशी': 85, 'पंच्यांशी': 85, 'पंचाऐंशी': 85, 'panchaishi': 85, 'panchashi': 85, 'pachasi': 85, 'पचासी': 85,
-  'शहाऐंशी': 86, 'सत्याऐंशी': 87, 'अठ्ठ्याऐंशी': 88,
+  'शहाऐंशी': 86, 'सत्याऐंशी': 87, 'अठ्ठ्याऐंशी': 88, 'atthyaainshi': 88, 'atthyainshi': 88, 'athyainshi': 88,
   'एकोणनव्वद': 89, 'nawasi': 89, 'ekonnavvad': 89,
-  'aishi': 80, 'ayshi': 80, 'ainshi': 80, 'aenshi': 80, 'aashi': 80, 'ashi': 80, 'assi': 80, 'ऐंशी': 80, 'ऐशी': 80, 'अस्सी': 80, 'eighty': 80,
+  'aainshi': 80, 'aishi': 80, 'ayshi': 80, 'ainshi': 80, 'aenshi': 80, 'aashi': 80, 'ashi': 80, 'assi': 80, 'ऐंशी': 80, 'ऐशी': 80, 'अस्सी': 80, 'eighty': 80,
 
   // 70s
   'एकाहत्तर': 71, 'बहात्तर': 72, 'त्र्याहत्तर': 73, 'चौऱ्याहत्तर': 74,
@@ -145,8 +155,8 @@ const UNITS_AND_TENS_MAP = {
   'saath': 60, 'sath': 60, 'साठ': 60, 'sixty': 60,
 
   // 50s
-  'एकावन्न': 51, 'बावन्न': 52, 'त्रेपन्न': 53, 'चोपन्न': 54,
-  'पंचावन्न': 55, 'panchavanna': 55, 'pachpan': 55,
+  'एकावन्न': 51, 'बावन्न': 52, 'त्रेपन्न': 53, 'trepanna': 53, 'चोपन्न': 54,
+  'पंचावन्न': 55, 'panchaavanna': 55, 'panchavanna': 55, 'pachpan': 55,
   'छप्पन्न': 56, 'सत्तावन्न': 57, 'अठ्ठावन्न': 58, 'एकोणसाठ': 59,
   'pannas': 50, 'pachas': 50, 'पन्नास': 50, 'पचास': 50, 'fifty': 50,
 
@@ -239,12 +249,11 @@ function parseMarathiSpokenNumbers(text) {
   // 1. Convert Devanagari digits [०-९]
   s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
 
-  // 1a. Lakhs
+  // 1a. Lakhs (Only when explicitly preceded by a number/multiplier e.g. '1 lakh')
   s = s.replace(PRECOMPILED_LAKH_REGEX, (_, m) => {
     const val = /^\d+(?:\.\d+)?$/.test(m) ? parseFloat(m) : (THOUSAND_MULTIPLIERS[m.toLowerCase()] || 1);
     return ` ${Math.round(val * 100000)} `;
   });
-  s = s.replace(PRECOMPILED_STANDALONE_LAKH_REGEX, ' 100000 ');
 
   // 1b. Thousands
   s = s.replace(PRECOMPILED_THOU_REGEX, (_, m) => {

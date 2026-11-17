@@ -118,7 +118,11 @@ const brandAndNoCurrencyOrders = [
   { input: "१ तोळा विलायची ४० रुपये", expectedCount: 1, expectedName: "वेलची" },
   { input: "10 packet balaji wafers 50 rupaye", expectedCount: 1, expectedName: "Balaji Wafers" },
   { input: "Super dust 250gm 70 rupaye", expectedCount: 1, expectedName: "सुपर डस्ट चहा" },
-  { input: "1kg Besan 120 rupaye", expectedCount: 1, expectedName: "बेसन" }
+  { input: "1kg Besan 120 rupaye", expectedCount: 1, expectedName: "बेसन" },
+  { input: "1 kg tel 380 rupaye", expectedCount: 1, expectedPrice: 380 },
+  { input: "1 kg badam 700 rupaye", expectedCount: 1, expectedPrice: 700 },
+  { input: "1 kg kaju 1140 rupaye", expectedCount: 1, expectedPrice: 1140 },
+  { input: "1 box ghee 1200 rupaye", expectedCount: 1, expectedPrice: 1200 }
 ];
 
 let brandPass = 0;
