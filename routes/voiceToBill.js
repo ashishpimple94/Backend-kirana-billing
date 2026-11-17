@@ -160,6 +160,8 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
  *  - priceMode: 'per_unit' | 'line_total' (optional)
  */
 router.post('/parse-bill', async (req, res) => {
+  const reqStart = Date.now();
+  console.log(`[POST /api/parse-bill] Request started at ${new Date().toISOString()}`);
   const { transcript, language = 'mr-IN', priceMode = process.env.PRICE_MODE || 'per_unit', outputLang = null, billLanguage = null } = req.body || {};
   const targetOutputLang = outputLang || billLanguage || null;
 
@@ -170,30 +172,23 @@ router.post('/parse-bill', async (req, res) => {
   }
 
   const cleanText = transcript.trim();
-  console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars): "${cleanText}", outputLang: ${targetOutputLang || 'default'}`);
+  console.log(`[POST /api/parse-bill] Parsing transcript (${cleanText.length} chars) after ${Date.now() - reqStart}ms: "${cleanText}"`);
 
-  // Fast-path: Check Redis cache for identical spoken order transcript
-  const cacheKey = `parse:${language}:${targetOutputLang || 'def'}:${priceMode}:${Buffer.from(cleanText.toLowerCase()).toString('base64').slice(0, 60)}`;
-  const cachedResult = await redis.get(cacheKey);
-  if (cachedResult && Array.isArray(cachedResult.items) && cachedResult.items.length > 0) {
-    console.log(`[POST /api/parse-bill] Redis Cache HIT for "${cleanText}" (${cachedResult.items.length} items)`);
-    res.set('X-Cache', 'HIT');
-    return res.json(cachedResult);
-  }
-
-  // Fast-Path: Instant local Regex Parser (< 5ms)
+  // Fast-Path: Instant local Regex Parser (< 5ms) - run BEFORE anything else!
+  const tRegexStart = Date.now();
   const fastItems = parseBillWithRegex(cleanText, { priceMode, language, outputLang: targetOutputLang });
+  console.log(`[POST /api/parse-bill] parseBillWithRegex took ${Date.now() - tRegexStart}ms, items: ${fastItems.length}`);
   if (Array.isArray(fastItems) && fastItems.length > 0) {
-    console.log(`[POST /api/parse-bill] Fast-Path HIT: ${fastItems.length} items in 2ms`);
     const responseData = {
       success: true,
       transcript: cleanText,
       items: fastItems,
       priceMode,
       provider: 'fastpath-regex',
+      elapsedMs: Date.now() - reqStart,
     };
-    redis.set(cacheKey, responseData, 86400).catch(() => {});
-    res.set('X-Cache', 'FASTPATH');
+    res.set('X-Response-Time', `${Date.now() - reqStart}ms`);
+    console.log(`[POST /api/parse-bill] Returning Fast-Path in ${Date.now() - reqStart}ms`);
     return res.json(responseData);
   }
 
