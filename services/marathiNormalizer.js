@@ -291,7 +291,7 @@ function parseMarathiSpokenNumbers(text) {
 
 // 3. Marathi Unit Normalization (Unicode-safe)
 const MARATHI_UNITS = [
-  { pattern: makeUnicodeRegex('किलो|किग्र|कि\\.ग्रा|kilo|kilos|kg|kgs|kilogram'), canonical: 'kg' },
+  { pattern: makeUnicodeRegex('किलो|किग्र|कि\\.ग्रा|kilo|kilos|kg|kgs|kilogram|किलू|किलु|kilu'), canonical: 'kg' },
   { pattern: makeUnicodeRegex('ग्रॅम|ग्राम|ग्रा|गरयम|गराम|गिराम|ग्रेम|gram|grams|gm|gms|g'), canonical: 'g' },
   { pattern: makeUnicodeRegex('लिटर|लीटर|litre|litres|liter|liters|ltr|ltrs|l'), canonical: 'litre' },
   { pattern: makeUnicodeRegex('मिली|मिलीलिटर|ml|mls|millilitre'), canonical: 'ml' },
@@ -410,6 +410,33 @@ function normalizeMarathiTranscript(text) {
 
   // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
   s = deduplicateSpokenTokens(s);
+
+  // 1a0. Un-glue spoken numeral + unit words (e.g. 'एककिलो', 'एककिलू', 'ekkilo', 'ekkilu', 'दोनकिलो', 'पावकिलो', 'अर्धाकिलो', etc.)
+  s = s.replace(/(?:^|\s)(?:ekkilo|ekkilu|ekilo|एककिलो|एककिलू|एककिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1 kg ');
+  s = s.replace(/(?:^|\s)(?:donkilo|donkilu|दोनकिलो|दोनकिलू|दोनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2 kg ');
+  s = s.replace(/(?:^|\s)(?:tinkilo|tinkilu|तीनकिलो|तीनकिलू|तीनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 3 kg ');
+  s = s.replace(/(?:^|\s)(?:charkilo|charkilu|चारकिलो|चारकिलू|चारकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 4 kg ');
+  s = s.replace(/(?:^|\s)(?:pachkilo|pachkilu|पाचकिलो|पाचकिलू|पाचकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 5 kg ');
+  s = s.replace(/(?:^|\s)(?:dahakilo|dahakilu|दहाकिलो|दहाकिलू|दहाकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 10 kg ');
+  s = s.replace(/(?:^|\s)(?:pavkilo|pavkilu|पावकिलो|पावशेर)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 250 gm ');
+  s = s.replace(/(?:^|\s)(?:ardhakilo|ardhakilu|अर्धाकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 500 gm ');
+  s = s.replace(/(?:^|\s)(?:didshekilo|didkilo|दीडकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1.5 kg ');
+  s = s.replace(/(?:^|\s)(?:adichkilo|अडीचकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2.5 kg ');
+  s = s.replace(/(?:^|\s)(?:ekliter|eklitre|एकलिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1 litre ');
+  s = s.replace(/(?:^|\s)(?:donliter|donlitre|दोनलिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2 litre ');
+  s = s.replace(/(?:^|\s)(?:ardhaliter|अर्धालिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 500 ml ');
+  s = s.replace(/(?:^|\s)(?:pavliter|पावलिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 250 ml ');
+  s = s.replace(/(?:^|\s)(?:ektola|एकतोळा|एकतोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 10 gm ');
+  s = s.replace(/(?:^|\s)(?:dontole|dontola|दोनतोळे|दोनतोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 20 gm ');
+  s = s.replace(/(?:^|\s)(?:ekpacket|ekpakit|एकपाकीट|एकपॅकेट)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1 packet ');
+  s = s.replace(/(?:^|\s)(?:donpacket|donpakit|दोनपाकीट|दोनपॅकेट)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2 packet ');
+  s = s.replace(/(?:^|\s)(?:ekbox|एकखोका|एकबॉक्स)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1 box ');
+  s = s.replace(/(?:^|\s)(?:donbox|दोनखोके|दोनबॉक्स)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2 box ');
+  s = s.replace(/(?:^|\s)(?:eknag|एकनग)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 1 pcs ');
+  s = s.replace(/(?:^|\s)(?:donnag|दोननग)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' 2 pcs ');
+
+  // Support Marathi dialect 'किलू' / 'kilu' as 'kilo':
+  s = s.replace(/(?:^|\s)(?:kilu|किलू|किलु)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, ' kilo ');
 
   // 1a. Convert tola (Indian Kirana standard: 1 tola = 10 grams) - unicode-safe boundaries
   s = s.replace(/(?:ardha\s*tola|aadha\s*tola|अर्धा\s*तोळा|आधा\s*तोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '5 gm');
