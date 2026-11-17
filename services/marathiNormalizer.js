@@ -295,7 +295,7 @@ const MARATHI_UNITS = [
   { pattern: makeUnicodeRegex('ग्रॅम|ग्राम|ग्रा|गरयम|गराम|गिराम|ग्रेम|gram|grams|gm|gms|g'), canonical: 'g' },
   { pattern: makeUnicodeRegex('लिटर|लीटर|litre|litres|liter|liters|ltr|ltrs|l'), canonical: 'litre' },
   { pattern: makeUnicodeRegex('मिली|मिलीलिटर|ml|mls|millilitre'), canonical: 'ml' },
-  { pattern: makeUnicodeRegex('पुडा|पुडे|पुडी|पाकीट|पाकिटे|packet|packets|pkt|pkts|pouch'), canonical: 'packet' },
+  { pattern: makeUnicodeRegex('पुडा|पुडे|पुडी|पाकीट|पाकिटे|पॅकेट|पॅकेट्स|पैकेट|पॉकेट|packet|packets|pkt|pkts|pouch'), canonical: 'packet' },
   { pattern: makeUnicodeRegex('नग|पीस|piece|pieces|pcs|pc|item|items'), canonical: 'piece' },
   { pattern: makeUnicodeRegex('बाटली|बाटल्या|bottle|bottles|btl'), canonical: 'bottle' },
   { pattern: makeUnicodeRegex('डबा|डबे|खोके|खोका|बॉक्स|box|boxes|carton'), canonical: 'box' },
@@ -339,7 +339,7 @@ const MARATHI_KIRANA_ITEMS = [
   // Cooking Oils & Ghee
   { canonical: 'Godetel', marathi: 'गोडेतेल', hindi: 'तेल', terms: ['गोडेतेल', 'तेल', 'तेलाची', 'तेलाचे', 'tel', 'oil', 'cooking oil'] },
   { canonical: 'Shengdana Tel', marathi: 'शेंगदाणा तेल', hindi: 'मूंगफली तेल', terms: ['शेंगदाणा तेल', 'shengdana tel', 'groundnut oil', 'peanut oil'] },
-  { canonical: 'Sunflower Tel', marathi: 'सूर्यफूल तेल', hindi: 'सूरजमुखी तेल', terms: ['सूर्यफूल तेल', 'sunflower oil', 'फॉर्च्यून तेल', 'फॉर्च्यून'] },
+  { canonical: 'Sunflower Tel', marathi: 'सूर्यफूल तेल', hindi: 'सूरजमुखी तेल', terms: ['सूर्यफूल तेल', 'sunflower oil', 'सनफ्लॉवर तेल', 'सनफ्लॉवर'] },
   { canonical: 'Gemini Tel', marathi: 'जेमिनी तेल', hindi: 'जेमिनी तेल', terms: ['जेमिनी तेल', 'जेमिनी', 'gemini oil', 'gemini'] },
   { canonical: 'Mohari Tel', marathi: 'मोहरी तेल', hindi: 'सरसों तेल', terms: ['मोहरी तेल', 'राई तेल', 'mustard oil', 'sarson oil'] },
   { canonical: 'Khobrel Tel', marathi: 'खोबरेल तेल', hindi: 'नारियल तेल', terms: ['खोबरेल तेल', 'पॅराशूट', 'पॅराशूट तेल', 'khobrel tel', 'coconut oil', 'parachute'] },
@@ -550,12 +550,9 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN', outputLang = null
   for (const entry of MARATHI_KIRANA_ITEMS) {
     for (const term of entry.terms) {
       const termLower = term.toLowerCase();
-      if (
-        clean === termLower ||
-        stripped === termLower ||
-        clean.split(/\s+/).includes(termLower) ||
-        clean.includes(termLower)
-      ) {
+      // Only match if exact term or stripped term (e.g. "साखर" -> "साखर", "तेलाचे" -> "तेल")
+      // Never collapse a multi-word brand (e.g. "फॉर्च्यून तेल", "गोदरेज साबण") to a generic word!
+      if (clean === termLower || stripped === termLower) {
         if (isEnglish) return entry.canonical;
         if (isHindi) return entry.hindi || entry.canonical;
         if (isMarathi) return entry.marathi || entry.canonical;
@@ -564,7 +561,7 @@ function canonicalizeMarathiItemName(name, language = 'mr-IN', outputLang = null
     }
   }
 
-  // Fallback: If in Devanagari
+  // Fallback: Preserve exact user-spoken name or brand directly
   if (isDevanagari) {
     const strippedDev = deduped.replace(/(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$/gi, '').trim();
     if (isEnglish) {

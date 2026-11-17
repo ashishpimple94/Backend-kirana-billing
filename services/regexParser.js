@@ -51,7 +51,7 @@ const UNIT_MAP = {
   ml: 'ml', mls: 'ml', milli: 'ml', millilitre: 'ml', milliliter: 'ml', 'मिली': 'ml',
   box: 'box', boxes: 'box', carton: 'box', cartons: 'box', 'बॉक्स': 'box', 'खोके': 'box', 'खोका': 'box', 'डबा': 'box',
   pcs: 'pcs', pc: 'pcs', piece: 'pcs', pieces: 'pcs', item: 'pcs', items: 'pcs', 'पीस': 'pcs', nag: 'nag', 'नग': 'nag',
-  puda: 'packet', pude: 'packet', pkt: 'packet', pkts: 'packet', packet: 'packet', packets: 'packet', pouch: 'packet', pouches: 'packet', 'पुडा': 'packet', 'पाकीट': 'packet',
+  puda: 'packet', pude: 'packet', pkt: 'packet', pkts: 'packet', packet: 'packet', packets: 'packet', pouch: 'packet', pouches: 'packet', 'पुडा': 'packet', 'पाकीट': 'packet', 'पॅकेट': 'packet', 'पॅकेट्स': 'packet', 'पैकेट': 'packet', 'पॉकेट': 'packet',
   dozen: 'dozen', 'डझन': 'dozen', 'दर्जन': 'dozen',
   btl: 'bottle', bottle: 'bottle', bottles: 'bottle', 'बाटली': 'bottle',
 };
@@ -117,21 +117,21 @@ function parseBillWithRegex(transcript, options = {}) {
   const unitRegex = `(?:${unitListStr})`;
   const currRegex = `(?:rs|rupees|rupaye|rupay|रुपये|रुपया|रू|₹|\\/-)`;
 
-  // Pattern A: <name> <qty> <unit> <price> <rs>
+  // Pattern A: <name> <qty> <unit> <price> (optional rs)
   const patternA = new RegExp(
-    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})\\s+(\\d+(?:\\.\\d+)?)\\s*${currRegex}`,
+    `([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})\\s+(\\d+(?:\\.\\d+)?)(?:\\s*${currRegex})?(?=[,\\s;+]|$)`,
     'gi'
   );
 
-  // Pattern B: <qty> <unit> <name> <price> <rs>
+  // Pattern B: <qty> <unit> <name> <price> (optional rs)
   const patternB = new RegExp(
-    `(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)\\s*${currRegex}`,
+    `(\\d+(?:\\.\\d+)?)\\s*(${unitRegex})\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(\\d+(?:\\.\\d+)?)(?:\\s*${currRegex})?(?=[,\\s;+]|$)`,
     'gi'
   );
 
-  // Pattern E: <qty> <name> <unit> <price> <rs> (e.g. 2 parle box 1280 rs)
+  // Pattern E: <qty> <name> <unit> <price> (optional rs) (e.g. 2 parle box 1280 rs)
   const patternE = new RegExp(
-    `(\\d+(?:\\.\\d+)?)\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(${unitRegex})\\s+(\\d+(?:\\.\\d+)?)\\s*${currRegex}`,
+    `(\\d+(?:\\.\\d+)?)\\s+([A-Za-z\\u0900-\\u097F][A-Za-z\\u0900-\\u097F\\s-]*?)\\s+(${unitRegex})\\s+(\\d+(?:\\.\\d+)?)(?:\\s*${currRegex})?(?=[,\\s;+]|$)`,
     'gi'
   );
 

@@ -106,10 +106,43 @@ for (const eo of englishOrders) {
 }
 console.log(`✓ English Mode Test: ${engPass}/${englishOrders.length} Passed`);
 
+// 4. Direct Spoken & Brand Preservation Tests
+const brandAndNoCurrencyOrders = [
+  { input: "२ किलो साखर ४० , १ किलो मैदा २५", expectedCount: 2 },
+  { input: "५०० ग्रॅम चहा ११० , १ लिटर गोडेतेल १६०", expectedCount: 2 },
+  { input: "२ किलो फॉर्च्यून तेल १६० रुपये", expectedCount: 1, expectedName: "फॉर्च्यून तेल" },
+  { input: "१ पॅकेट वाघ बकरी चहा ११० रुपये", expectedCount: 1, expectedName: "वाघ बकरी चहा" },
+  { input: "२ बॉक्स गोदरेज साबण ५००० रुपये", expectedCount: 1, expectedName: "गोदरेज साबण" },
+  { input: "साखर २ किलो चाळीस", expectedCount: 1, expectedPrice: 40 },
+  { input: "५०० ग्रॅम हळदीराम भुजिया १८० रुपये", expectedCount: 1, expectedName: "हळदीराम भुजिया" }
+];
+
+let brandPass = 0;
+for (const b of brandAndNoCurrencyOrders) {
+  const parsed = parseBillWithRegex(b.input, { priceMode: 'per_unit', language: 'mr-IN' });
+  if (parsed.length === b.expectedCount) {
+    if (b.expectedName && parsed[0].name !== b.expectedName) {
+      failed++;
+      console.error(`FAIL Brand Name: "${b.input}" -> got "${parsed[0].name}", expected "${b.expectedName}"`);
+    } else if (b.expectedPrice && parsed[0].price !== b.expectedPrice) {
+      failed++;
+      console.error(`FAIL Price: "${b.input}" -> got "${parsed[0].price}", expected "${b.expectedPrice}"`);
+    } else {
+      brandPass++;
+    }
+  } else {
+    failed++;
+    console.error(`FAIL Count: "${b.input}" -> got ${parsed.length} items, expected ${b.expectedCount}`);
+  }
+}
+console.log(`✓ Direct Spoken & Brands Test: ${brandPass}/${brandAndNoCurrencyOrders.length} Passed`);
+
+const totalTests = accentPhrases.length + orders.length + englishOrders.length + brandAndNoCurrencyOrders.length;
+
 if (failed > 0) {
   console.error(`\n❌ TEST SUITE FAILED with ${failed} errors.`);
   process.exit(1);
 } else {
-  console.log('\n✅ ALL 43 TESTS PASSED SUCCESSFULLY!');
+  console.log(`\n✅ ALL ${totalTests} TESTS PASSED SUCCESSFULLY!`);
   process.exit(0);
 }
