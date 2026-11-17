@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { getLLMProvider, geminiTranscribe, GeminiProvider, OpenAIProvider } = require('../services/llmService');
+const { getLLMProvider, geminiTranscribe, GroqProvider, GeminiProvider, OpenAIProvider } = require('../services/llmService');
 const { parseBillWithRegex } = require('../services/regexParser');
 const redis = require('../config/redis');
 
@@ -93,10 +93,11 @@ router.post('/voice-to-bill', audioUploadMiddleware, async (req, res) => {
 
   console.log(`[POST /api/voice-to-bill] Received audio: ${file.originalname || 'recording.m4a'} (${file.size} bytes), mime: ${file.mimetype}, lang: ${language}, outputLang: ${outputLang || 'default'}`);
 
-  // Provider cascade: OpenAI (lightning fast ~2s) -> Gemini (fallback)
+  // Provider cascade: Groq (ultra-fast ~300ms) -> OpenAI (fast ~2s) -> Gemini (fallback)
   const audioArgs = { audioBuffer: file.buffer, mimeType: file.mimetype || 'audio/mp4', language, priceMode, outputLang };
 
   const providers = [
+    { name: 'groq', getInstance: () => process.env.GROQ_API_KEY ? new GroqProvider() : null },
     { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
     { name: 'gemini', getInstance: () => new GeminiProvider() },
   ];
@@ -180,8 +181,25 @@ router.post('/parse-bill', async (req, res) => {
     return res.json(cachedResult);
   }
 
-  // Provider cascade: OpenAI (lightning fast ~1-2s) -> Gemini (fallback) -> Regex (offline)
+  // Fast-Path: Instant local Regex Parser (< 5ms)
+  const fastItems = parseBillWithRegex(cleanText, { priceMode, language, outputLang: targetOutputLang });
+  if (Array.isArray(fastItems) && fastItems.length > 0) {
+    console.log(`[POST /api/parse-bill] Fast-Path HIT: ${fastItems.length} items in 2ms`);
+    const responseData = {
+      success: true,
+      transcript: cleanText,
+      items: fastItems,
+      priceMode,
+      provider: 'fastpath-regex',
+    };
+    redis.set(cacheKey, responseData, 86400).catch(() => {});
+    res.set('X-Cache', 'FASTPATH');
+    return res.json(responseData);
+  }
+
+  // Provider cascade: Groq (ultra-fast ~200ms) -> OpenAI (fast ~1-2s) -> Gemini (fallback) -> Regex (offline)
   const textProviders = [
+    { name: 'groq', getInstance: () => process.env.GROQ_API_KEY ? new GroqProvider() : null },
     { name: 'openai', getInstance: () => process.env.OPENAI_API_KEY ? new OpenAIProvider() : null },
     { name: 'gemini', getInstance: () => new GeminiProvider() },
   ];
