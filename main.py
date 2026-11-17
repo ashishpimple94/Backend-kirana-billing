@@ -118,7 +118,7 @@ async def api_parse_bill(req: ParseBillRequest):
             "elapsedMs": elapsed_ms,
         }
 
-    # 2. AI Provider: Groq LLaMA 3.3 (fastest ~200ms) or Gemini Flash
+    # 2. AI Provider: Groq (fastest ~200ms) or Gemini
     if GROQ_API_KEY:
         try:
             groq_res = await parse_transcript_with_groq(transcript)
@@ -128,7 +128,7 @@ async def api_parse_bill(req: ParseBillRequest):
                     "transcript": transcript,
                     "items": groq_res["items"],
                     "priceMode": req.priceMode,
-                    "provider": "groq-llama3.3",
+                    "provider": groq_res.get("provider", "groq"),
                 }
         except Exception as e:
             print(f"[FastAPI parse-bill] Groq fallback failed: {e}")
@@ -141,7 +141,7 @@ async def api_parse_bill(req: ParseBillRequest):
                 "transcript": transcript,
                 "items": gemini_res.get("items", []),
                 "priceMode": req.priceMode,
-                "provider": "gemini-2.5-flash",
+                "provider": gemini_res.get("provider", "gemini"),
             }
         except Exception as e:
             print(f"[FastAPI parse-bill] Gemini fallback failed: {e}")
@@ -160,17 +160,21 @@ async def api_parse_bill(req: ParseBillRequest):
 async def api_voice_to_bill(
     request: Request,
     audio: Optional[UploadFile] = File(None),
-    language: Optional[str] = Form("mr-IN"),
-    priceMode: Optional[str] = Form("per_unit"),
 ):
     """
     Receives voice audio (file upload, binary body, or JSON with base64)
     and converts it into bill items with spoken pronunciations.
     """
+    # Extract query params as defaults
+    qp = request.query_params
+    language = qp.get("language", "mr-IN")
+    priceMode = qp.get("priceMode", "per_unit")
+    outputLang = qp.get("outputLang", None)
+
     audio_bytes = None
     mime_type = "audio/mp4"
 
-    # Check multipart file
+    # Check multipart form
     if audio is not None:
         audio_bytes = await audio.read()
         mime_type = audio.content_type or "audio/mp4"
@@ -186,6 +190,19 @@ async def api_voice_to_bill(
                     mime_type = body.get("mimeType", "audio/mp4")
                     language = body.get("language", language)
                     priceMode = body.get("priceMode", priceMode)
+                    outputLang = body.get("outputLang", outputLang)
+            except Exception:
+                pass
+        elif "multipart/form-data" in ct:
+            try:
+                form = await request.form()
+                form_file = form.get("audio")
+                if form_file and hasattr(form_file, "read"):
+                    audio_bytes = await form_file.read()
+                    mime_type = getattr(form_file, "content_type", "audio/mp4")
+                language = form.get("language", language)
+                priceMode = form.get("priceMode", priceMode)
+                outputLang = form.get("outputLang", outputLang)
             except Exception:
                 pass
         elif "audio/" in ct or "video/" in ct or "octet-stream" in ct:
@@ -198,7 +215,7 @@ async def api_voice_to_bill(
             detail="Audio data is required. Please upload an audio file or base64 audio."
         )
 
-    # 1. Cascade: Groq Whisper (ultra fast ~300ms) -> Gemini 2.5 Flash
+    # 1. Groq Whisper (ultra fast ~300ms) + FastPath Regex
     if GROQ_API_KEY:
         try:
             res = await parse_audio_with_groq(audio_bytes, "recording.m4a", language)
@@ -207,11 +224,12 @@ async def api_voice_to_bill(
                 "transcript": res.get("transcript", ""),
                 "items": res.get("items", []),
                 "priceMode": priceMode,
-                "provider": "groq-whisper",
+                "provider": res.get("provider", "groq-whisper"),
             }
         except Exception as e:
             print(f"[FastAPI voice-to-bill] Groq failed: {e}")
 
+    # 2. Gemini fallback
     if GEMINI_API_KEY:
         try:
             res = await parse_with_gemini(audio_bytes, mime_type, language)
@@ -220,7 +238,7 @@ async def api_voice_to_bill(
                 "transcript": res.get("transcript", ""),
                 "items": res.get("items", []),
                 "priceMode": priceMode,
-                "provider": "gemini-2.5-flash",
+                "provider": res.get("provider", "gemini"),
             }
         except Exception as e:
             print(f"[FastAPI voice-to-bill] Gemini failed: {e}")
