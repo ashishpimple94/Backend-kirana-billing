@@ -699,7 +699,7 @@ class GroqProvider {
       };
     }
 
-    // Fallback to Groq Llama-3.3-70b-versatile (~200ms) for complex phrasing
+    // Fallback to Groq Qwen/GPT (~400ms) for complex phrasing
     return this.parseTranscript({ transcript, language, priceMode, outputLang });
   }
 
@@ -724,39 +724,52 @@ class GroqProvider {
       ? `Language: English letters output. Spoken language is ${language}. Output all item names in simple PHONETIC ENGLISH matching exact Marathi spoken words (e.g. Sakhar, Maida, Rawa, Shengdane, Chaha, Gul, Shabu, Sarki Pend, Pohe, Godetel, Meeth, Dudh, Tup).\nSpoken Transcript: "${transcript}"`
       : `Language: Marathi (Pure Devanagari script only).\nSpoken Transcript: "${transcript}"`;
 
-    const chatRes = await fetch(this.chatUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: promptHint },
-        ],
-      }),
-    });
+    const chatModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b'];
+    let lastError = null;
 
-    if (!chatRes.ok) {
-      const err = await chatRes.text();
-      throw new Error(`Groq Chat error: ${err}`);
+    for (const model of chatModels) {
+      try {
+        const chatRes = await fetch(this.chatUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: promptHint },
+            ],
+          }),
+        });
+
+        if (!chatRes.ok) {
+          const err = await chatRes.text();
+          throw new Error(`Groq Chat error: ${err}`);
+        }
+
+        const chatData = await chatRes.json();
+        const content = chatData.choices?.[0]?.message?.content || '{}';
+        const parsed = JSON.parse(content);
+        const rawList = Array.isArray(parsed) ? parsed : (parsed.items || []);
+        const items = sanitizeItems(rawList, priceMode, language, outputLang);
+
+        return {
+          transcript: convertIndicScriptToDevanagari(parsed.transcript || transcript),
+          items,
+          provider: 'groq',
+          model,
+        };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Groq Chat] Model ${model} failed, trying next:`, err.message);
+      }
     }
 
-    const chatData = await chatRes.json();
-    const content = chatData.choices?.[0]?.message?.content || '{}';
-    const parsed = JSON.parse(content);
-    const items = sanitizeItems(parsed.items, priceMode, language, outputLang);
-
-    return {
-      transcript: convertIndicScriptToDevanagari(parsed.transcript || transcript),
-      items,
-      provider: 'groq',
-      model: 'llama-3.3-70b-versatile',
-    };
+    throw lastError || new Error('Groq models failed');
   }
 }
 
