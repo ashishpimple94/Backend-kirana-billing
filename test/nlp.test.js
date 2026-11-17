@@ -114,7 +114,11 @@ const brandAndNoCurrencyOrders = [
   { input: "१ पॅकेट वाघ बकरी चहा ११० रुपये", expectedCount: 1, expectedName: "वाघ बकरी चहा" },
   { input: "२ बॉक्स गोदरेज साबण ५००० रुपये", expectedCount: 1, expectedName: "गोदरेज साबण" },
   { input: "साखर २ किलो चाळीस", expectedCount: 1, expectedPrice: 40 },
-  { input: "५०० ग्रॅम हळदीराम भुजिया १८० रुपये", expectedCount: 1, expectedName: "हळदीराम भुजिया" }
+  { input: "५०० ग्रॅम हळदीराम भुजिया १८० रुपये", expectedCount: 1, expectedName: "हळदीराम भुजिया" },
+  { input: "१ तोळा विलायची ४० रुपये", expectedCount: 1, expectedName: "वेलची" },
+  { input: "10 packet balaji wafers 50 rupaye", expectedCount: 1, expectedName: "Balaji Wafers" },
+  { input: "Super dust 250gm 70 rupaye", expectedCount: 1, expectedName: "सुपर डस्ट चहा" },
+  { input: "1kg Besan 120 rupaye", expectedCount: 1, expectedName: "बेसन" }
 ];
 
 let brandPass = 0;

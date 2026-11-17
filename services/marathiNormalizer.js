@@ -405,16 +405,21 @@ function normalizeMarathiTranscript(text) {
   // 0. Convert any misidentified Indic script (like Gujarati) to pure Marathi Devanagari
   let s = convertIndicScriptToDevanagari(text);
 
+  // 0b. Convert Devanagari digits [०-९] early so all numeric regexes work seamlessly!
+  s = s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS[d] || d);
+
   // 1. Remove stutter/echo repetitions (sakhar-sakhar -> sakhar)
   s = deduplicateSpokenTokens(s);
 
-  // 1a. Convert tola (Indian Kirana standard: 1 tola = 10 grams)
-  s = s.replace(/(?:ardha\s*tola|aadha\s*tola|अर्धा\s*तोळा|आधा\s*तोला)\b/gi, '5 gm');
-  s = s.replace(/(?:ek\s*tola|एक\s*तोळा|एक\s*तोला)\b/gi, '10 gm');
-  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:tola|tole|तोळा|तोळे|तोला)\b/gi, (_, n) => (parseFloat(n) * 10) + ' gm');
+  // 1a. Convert tola (Indian Kirana standard: 1 tola = 10 grams) - unicode-safe boundaries
+  s = s.replace(/(?:ardha\s*tola|aadha\s*tola|अर्धा\s*तोळा|आधा\s*तोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '5 gm');
+  s = s.replace(/(?:ek\s*tola|एक\s*तोळा|एक\s*तोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '10 gm');
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:tola|tole|तोळा|तोळे|तोला)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, (_, n) => (parseFloat(n) * 10) + ' gm');
 
-  // 1b. Separate glued price words (e.g. 'pacahsherupaye' -> 'pacahshe rupaye', 'पन्नासरुपये' -> 'पन्नास रुपये')
-  s = s.replace(/([A-Za-z\u0900-\u097F]+?)(rupaye|rupay|rupees|rupee|रुपये|रुपया|रू|rs)\b/gi, '$1 $2');
+  // 1b. Separate glued price words (e.g. '50rs' -> '50 rs', 'pacahsherupaye' -> 'pacahshe rupaye', 'पन्नासरुपये' -> 'पन्नास रुपये')
+  // Note: 'rs' only separated after digits to avoid breaking words like 'wafers', 'cheers'
+  s = s.replace(/([A-Za-z\u0900-\u097F]+?)(rupaye|rupay|rupees|rupee|रुपये|रुपया|रू)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '$1 $2');
+  s = s.replace(/(\d+)(rs|रू)(?=[^\u0900-\u097Fa-zA-Z]|$)/gi, '$1 $2');
 
   // 1c. Handle per-unit spoken phrases ('60 per kg' -> '60 rs', '140rs per kg' -> '140 rs', '120 per dozen' -> '120 rs')
   s = s.replace(/(\d+(?:\.\d+)?)\s*(?:rs|rupees|rupaye|rupay|रुपये|रू)?\s*(?:per|\/|prati|दर|प्रति)\s*(?:kg|kilo|kilogram|किलो|किग्रा|litre|liter|लिटर|लीटर|l|dozen|डझन|दर्जन|gm|ग्रॅम|ग्राम|packet|पाकीट|box|खोके|pcs|नग)\b/gi, '$1 rs');
