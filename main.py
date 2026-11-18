@@ -35,8 +35,8 @@ from services.ai_service import (
     GEMINI_API_KEY,
     GROQ_API_KEY,
 )
+from models.bill import Bill, BillItem, BillCreateRequest
 from models_schema import (
-    BillCreateModel,
     ParseBillRequest,
     NumberToWordsRequest,
 )
@@ -252,23 +252,33 @@ async def api_voice_to_bill(
 # ── MongoDB Bills CRUD Routes ──
 
 @app.post("/api/bills")
-async def create_bill(bill_in: BillCreateModel):
+async def create_bill(bill_in: BillCreateRequest):
     db = get_database()
     if db is None:
         raise HTTPException(status_code=503, detail="Database not configured")
 
-    items_dicts = [it.dict() for it in bill_in.items]
-    subtotal = bill_in.subtotal or sum(it["amount"] or (it["quantity"] * it["price"]) for it in items_dicts)
-    gst_amt = bill_in.gstAmount or round((subtotal * (bill_in.gstRate or 0)) / 100, 2)
-    grand_total = bill_in.grandTotal or round(subtotal + gst_amt, 2)
+    # Generate unique billNumber if not supplied
+    bill_number = bill_in.billNumber or f"BILL-{int(time.time())}"
 
-    bill_doc = bill_in.dict()
-    bill_doc["items"] = items_dicts
-    bill_doc["subtotal"] = subtotal
-    bill_doc["gstAmount"] = gst_amt
-    bill_doc["grandTotal"] = grand_total
-    bill_doc["created_at"] = time.time()
+    # Build Bill model instance with computed totals
+    bill_obj = Bill(
+        billNumber=bill_number,
+        customerName=bill_in.customerName or "Walk-in Customer",
+        customerMobile=bill_in.customerMobile or "",
+        items=bill_in.items,
+        gstRate=bill_in.gstRate or 0.0,
+        paymentMode=bill_in.paymentMode or "Cash",
+        storeName=bill_in.storeName or "Bilzy Store",
+        transcript=bill_in.transcript or "",
+        source=bill_in.source or "voice",
+    )
+    bill_obj.compute_totals()
+    if bill_in.grandTotal is not None:
+        bill_obj.grandTotal = bill_in.grandTotal
+    if bill_in.subtotal is not None:
+        bill_obj.subtotal = bill_in.subtotal
 
+    bill_doc = bill_obj.to_mongo()
     res = await db.bills.insert_one(bill_doc)
     bill_doc["_id"] = str(res.inserted_id)
 
