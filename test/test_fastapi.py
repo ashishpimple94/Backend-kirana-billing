@@ -73,6 +73,8 @@ echo_tests = [
     ("shengdane 1kg 160 one sixty", 160.0, "one sixty"),
     ("besan 1kg 130 ekshe tees", 130.0, "ekshe tees"),
     ("celery 1kg 50 pachaas", 50.0, "pachaas"),
+    ("sakhar 1 kg /kilo 60 rupay", 60.0, None),
+    ("maida 1kg/kilo 50 rupay", 50.0, None),
 ]
 
 passed_echoes = 0
