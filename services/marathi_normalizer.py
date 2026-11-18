@@ -402,44 +402,91 @@ MARATHI_UNITS = [
 
 # Multilingual Kirana Item Catalog
 MARATHI_KIRANA_ITEMS = [
+    # Grains & Flours
+    {"canonical": "Tandul", "marathi": "तांदूळ", "hindi": "चावल", "terms": ["तांदूळ", "तांदुळ", "तान्दूल", "तान्दुल", "tandul", "tandool", "tandur", "chawal", "rice", "भात", "कोलम", "बासमती", "इंद्रायणी", "तुकडा", "जिरा राईस"]},
+    {"canonical": "Pohe", "marathi": "पोहे", "hindi": "पोहा", "terms": ["पोहे", "पोहा", "pohe", "poha", "जाडे पोहे", "पातळ पोहे"]},
+    {"canonical": "Bajri", "marathi": "बाजरी", "hindi": "बाजरा", "terms": ["बाजरी", "बाजरा", "bajri", "bajara", "bajra", "बाजरीचे पीठ"]},
+    {"canonical": "Gahu", "marathi": "गहू", "hindi": "गेहूं", "terms": ["गहू", "गहु", "gahu", "gehu", "wheat", "लोकवन", "सीहोर"]},
+    {"canonical": "Atta", "marathi": "गव्हाचे पीठ", "hindi": "आटा", "terms": ["गव्हाचे पीठ", "गहू आटा", "गहू पीठ", "कणिक", "आटा", "gahu aata", "gahu pith", "gahu peeth", "gehu atta", "atta", "aata", "wheat flour", "चक्की आटा"]},
+    {"canonical": "Jowar", "marathi": "ज्वारी", "hindi": "ज्वार", "terms": ["ज्वारी", "ज्वार", "jwari", "jowar", "jowari", "ज्वारीचे पीठ", "मालदांडी"]},
+    {"canonical": "Maida", "marathi": "मैदा", "hindi": "मैदा", "terms": ["मैदा", "माईदा", "मैधा", "maida", "all purpose flour"]},
+    {"canonical": "Besan", "marathi": "बेसन", "hindi": "बेसन", "terms": ["बेसन", "चना पीठ", "हरभरा पीठ", "besan", "gram flour"]},
+    {"canonical": "Rawa", "marathi": "रवा", "hindi": "सूजी", "terms": ["रवा", "बारीक रवा", "जाडा रवा", "सुजी", "सूजी", "rawa", "rava", "sooji", "suji", "semolina"]},
+    {"canonical": "Shabu", "marathi": "शाबू", "hindi": "साबूदाना", "terms": ["शाबू", "साबुदाणा", "साबुदाना", "shabu", "sabudana", "sago", "नायलॉन साबुदाणा"]},
+    {"canonical": "Makka", "marathi": "मका", "hindi": "मक्का", "terms": ["मका", "मक्का", "makka", "corn", "मक्याचे पीठ"]},
+    {"canonical": "Nachni", "marathi": "नाचणी", "hindi": "रागी", "terms": ["नाचणी", "रागी", "nachni", "ragi", "नाचणीचे पीठ"]},
+
+    # Pulses & Dals
+    {"canonical": "Masoor Dal", "marathi": "मसूर डाळ", "hindi": "मसूर दाल", "terms": ["मसूर डाळ", "मसूर", "मसुराची डाळ", "masoor dal", "masoor", "अख्खा मसूर", "लाल मसूर"]},
+    {"canonical": "Chana Dal", "marathi": "चना डाळ", "hindi": "चना दाल", "terms": ["चना डाळ", "चणा डाळ", "हरभरा डाळ", "chanadal", "chana dal", "harbhara dal"]},
+    {"canonical": "Tur Dal", "marathi": "तूर डाळ", "hindi": "अरहर दाल", "terms": ["तूर डाळ", "तुरीची डाळ", "तूरडाळ", "तूर", "tur dal", "toor dal", "arhar dal"]},
+    {"canonical": "Moong Dal", "marathi": "मूग डाळ", "hindi": "मूंग दाल", "terms": ["मूग डाळ", "मुगाची डाळ", "मूंग डाळ", "मूंगडाल", "मुंग दाल", "मुंगदाल", "moong dal", "mung dal", "हिरवे मूग", "मूग मोगर"]},
+    {"canonical": "Urad Dal", "marathi": "उडीद डाळ", "hindi": "उड़द दाल", "terms": ["उडीद डाळ", "उडदाची डाळ", "उडीद", "urad dal", "udid dal", "काळी उडीद"]},
+    {"canonical": "Chole", "marathi": "काबुली चणे", "hindi": "छोले", "terms": ["काबुली चणे", "काबुली चना", "छोले", "chole", "kabuli chana"]},
+    {"canonical": "Matki", "marathi": "मटकी", "hindi": "मटकी", "terms": ["मटकी", "मोड आलेली मटकी", "matki", "moth beans"]},
+    {"canonical": "Rajma", "marathi": "राजमा", "hindi": "राजमा", "terms": ["राजमा", "rajma", "चित्र राजमा", "लाल राजमा"]},
+    {"canonical": "Vatana", "marathi": "वाटाणा", "hindi": "मटर", "terms": ["वाटाणा", "सफेद वाटाणा", "हिरवा वाटाणा", "vatana", "matar", "dry peas"]},
+    {"canonical": "Kulith", "marathi": "कुळीथ", "hindi": "कुलथी", "terms": ["कुळीथ", "हुलगा", "kulith", "hulga", "horse gram"]},
+    {"canonical": "Harbhara", "marathi": "हरभरा", "hindi": "चना", "terms": ["हरभरा", "चणा", "काळा चणा", "harbhara", "chana", "black chana"]},
+
+    # Spices & Condiments
+    {"canonical": "Lavang", "marathi": "लवंग", "hindi": "लौंग", "terms": ["लवंग", "लावंग", "लौंग", "lawang", "lavang", "laung", "clove", "cloves"]},
+    {"canonical": "Supari", "marathi": "सुपारी", "hindi": "सुपारी", "terms": ["सुपारी", "सुपारी तुकडा", "supari", "betel nut", "आखा सुपारी"]},
+    {"canonical": "Dhane", "marathi": "धने", "hindi": "धनिया", "terms": ["धने", "धना", "धनिया", "dhane", "dhana", "dhaniya", "coriander", "coriander seeds", "धने पावडर"]},
+    {"canonical": "Jeera", "marathi": "जिरे", "hindi": "जीरा", "terms": ["जिरे", "जिरं", "जीरा", "jeera", "jira", "cumin", "cumin seeds", "जिरे पावडर"]},
+    {"canonical": "Mohari", "marathi": "मोहरी", "hindi": "राई", "terms": ["मोहरी", "राई", "mohari", "rai", "mustard seeds", "मोहरी दाणे"]},
+    {"canonical": "Halad", "marathi": "हळद", "hindi": "हल्दी", "terms": ["हळद", "हळदी", "हल्दी", "halad", "haldi", "turmeric", "हळद पावडर"]},
+    {"canonical": "Lal Tikhat", "marathi": "लाल तिखट", "hindi": "लाल मिर्च", "terms": ["लाल तिखट", "मिरची पावडर", "तिखट", "मिरची", "लाल मिरची", "lal tikhat", "mirchi", "mirchi powder", "chilli", "red chilli"]},
+    {"canonical": "Hing", "marathi": "हिंग", "hindi": "हींग", "terms": ["हिंग", "हींग", "hing", "asafoetida", "एव्हरेस्ट हिंग"]},
+    {"canonical": "Velchi", "marathi": "वेलची", "hindi": "इलायची", "terms": ["वेलची", "विलायची", "इलायची", "velchi", "elaichi", "cardamom", "हिरवी वेलची"]},
+    {"canonical": "Dalchini", "marathi": "दालचिनी", "hindi": "दालचीनी", "terms": ["दालचिनी", "दालचीनी", "dalchini", "cinnamon"]},
+    {"canonical": "Kalimiri", "marathi": "काळी मिरी", "hindi": "काली मिर्च", "terms": ["काळी मिरी", "मिरी", "काली मिर्च", "miri", "kalimiri", "black pepper", "pepper"]},
+    {"canonical": "Methi", "marathi": "मेथी दाणे", "hindi": "मेथी दाना", "terms": ["मेथी दाणे", "मेथी", "methi", "methi dana", "fenugreek"]},
+    {"canonical": "Khaskhas", "marathi": "खसखस", "hindi": "खसखस", "terms": ["खसखस", "khaskhas", "poppy seeds"]},
+    {"canonical": "Chakriphool", "marathi": "चक्रीफूल", "hindi": "चक्र फूल", "terms": ["चक्रीफूल", "चक्री फूल", "chakriphool", "star anise"]},
+    {"canonical": "Jaiphal", "marathi": "जायफळ", "hindi": "जयफल", "terms": ["जायफळ", "जयफल", "jaiphal", "nutmeg"]},
+    {"canonical": "Sunth", "marathi": "सुंठ", "hindi": "सोंठ", "terms": ["सुंठ", "सोंठ", "sunth", "sonth", "dry ginger"]},
+    {"canonical": "Badishep", "marathi": "बडीशेप", "hindi": "सौंफ", "terms": ["बडीशेप", "बडीसोप", "सौंफ", "badishep", "saunf", "fennel seeds"]},
+    {"canonical": "Owa", "marathi": "ओवा", "hindi": "अजवाइन", "terms": ["ओवा", "अजवाइन", "owa", "ajwain", "carom seeds"]},
+    {"canonical": "Tejpan", "marathi": "तमालपत्र", "hindi": "तेजपत्ता", "terms": ["तमालपत्र", "तेजपान", "तेजपत्ता", "tejpan", "tamalpatra", "bay leaf"]},
+    {"canonical": "Kasuri Methi", "marathi": "कसुरी मेथी", "hindi": "कसूरी मेथी", "terms": ["कसुरी मेथी", "कसूरी मेथी", "kasuri methi"]},
+    {"canonical": "Garam Masala", "marathi": "गरम मसाला", "hindi": "गरम मसाला", "terms": ["गरम मसाला", "सुहाना गरम मसाला", "garam masala", "masala"]},
+    {"canonical": "Goda Masala", "marathi": "गोडा मसाला", "hindi": "गोड़ा मसाला", "terms": ["गोडा मसाला", "काळं तिखट", "काळा मसाला", "goda masala", "kala masala"]},
+
+    # Sweeteners, Salt, Oils & Ghee
     {"canonical": "Sakhar", "marathi": "साखर", "hindi": "चीनी", "terms": ["साखर", "साखरेची", "साखरेचा", "साकर", "शुकर", "सुकर", "sakhar", "saakhar", "sugar", "चीनी", "शक्कर"]},
     {"canonical": "Gul", "marathi": "गूळ", "hindi": "गुड़", "terms": ["गूळ", "गुळ", "गुळाची", "gul", "gud", "jaggery", "गुड़"]},
     {"canonical": "Meeth", "marathi": "मीठ", "hindi": "नमक", "terms": ["मीठ", "मिठाचे", "meeth", "mith", "namak", "salt"]},
-    {"canonical": "Tandul", "marathi": "तांदूळ", "hindi": "चावल", "terms": ["तांदूळ", "तांदुळ", "tandul", "chawal", "rice", "भात", "कोलम", "बासमती"]},
-    {"canonical": "Gahu", "marathi": "गहू", "hindi": "गेहूं", "terms": ["गहू", "gahu", "gehu", "wheat"]},
-    {"canonical": "Atta", "marathi": "गव्हाचे पीठ", "hindi": "आटा", "terms": ["आटा", "पीठ", "गव्हाचे पीठ", "atta", "aata", "wheat flour"]},
-    {"canonical": "Maida", "marathi": "मैदा", "hindi": "मैदा", "terms": ["मैदा", "माईदा", "मैधा", "maida", "all purpose flour"]},
-    {"canonical": "Besan", "marathi": "बेसन", "hindi": "बेसन", "terms": ["बेसन", "चना पीठ", "besan", "gram flour"]},
-    {"canonical": "Rawa", "marathi": "रवा", "hindi": "सूजी", "terms": ["रवा", "बारीक रवा", "सुजी", "सूजी", "rawa", "rava", "sooji", "suji", "semolina"]},
-    {"canonical": "Pohe", "marathi": "पोहे", "hindi": "पोहा", "terms": ["पोहे", "पोहा", "pohe", "poha"]},
-    {"canonical": "Shabu", "marathi": "शाबू", "hindi": "साबूदाना", "terms": ["साबुदाणा", "शाबू", "shabu", "sabudana", "sago"]},
-    {"canonical": "Sarki Pend", "marathi": "सरकी पेंड", "hindi": "सरकी पेंड", "terms": ["सरकी पेंड", "सरकी पेंढ", "sarki pend", "sarkipend"]},
-    {"canonical": "Tur Dal", "marathi": "तूर डाळ", "hindi": "अरहर दाल", "terms": ["तूर डाळ", "तुरीची डाळ", "tur dal", "toor dal", "arhar dal"]},
-    {"canonical": "Chana Dal", "marathi": "चना डाळ", "hindi": "चना दाल", "terms": ["चना डाळ", "हरभरा डाळ", "chana dal"]},
-    {"canonical": "Moong Dal", "marathi": "मूग डाळ", "hindi": "मूंग दाल", "terms": ["मूग डाळ", "मुंग दाल", "moong dal", "mung dal"]},
-    {"canonical": "Urad Dal", "marathi": "उडीद डाळ", "hindi": "उड़द दाल", "terms": ["उडीद डाळ", "urad dal", "udid dal"]},
-    {"canonical": "Masoor Dal", "marathi": "मसूर डाळ", "hindi": "मसूर दाल", "terms": ["मसूर डाळ", "masoor", "masoor dal"]},
     {"canonical": "Godetel", "marathi": "गोडेतेल", "hindi": "तेल", "terms": ["गोडेतेल", "तेल", "तेलाचे", "tel", "oil", "cooking oil"]},
+    {"canonical": "Shengdana Tel", "marathi": "शेंगदाणा तेल", "hindi": "मूंगफली तेल", "terms": ["शेंगदाणा तेल", "shengdana tel", "groundnut oil", "peanut oil"]},
+    {"canonical": "Soyabean Tel", "marathi": "सोयाबीन तेल", "hindi": "सोयाबीन तेल", "terms": ["सोयाबीन तेल", "सोयाबीन", "soyabean oil", "soyabean tel"]},
     {"canonical": "Sunflower Tel", "marathi": "सूर्यफूल तेल", "hindi": "सूरजमुखी तेल", "terms": ["सूर्यफूल तेल", "sunflower oil", "सनफ्लॉवर तेल"]},
     {"canonical": "Gemini Tel", "marathi": "जेमिनी तेल", "hindi": "जेमिनी तेल", "terms": ["जेमिनी तेल", "gemini oil", "gemini"]},
     {"canonical": "Tup", "marathi": "तूप", "hindi": "घी", "terms": ["तूप", "तूपाचे", "साजूक तूप", "tup", "toop", "ghee"]},
-    {"canonical": "Halad", "marathi": "हळद", "hindi": "हल्दी", "terms": ["हळद", "halad", "haldi", "turmeric"]},
-    {"canonical": "Lal Tikhat", "marathi": "लाल तिखट", "hindi": "लाल मिर्च", "terms": ["लाल तिखट", "मिरची पावडर", "तिखट", "mirchi", "chilli"]},
-    {"canonical": "Jeera", "marathi": "जिरे", "hindi": "जीरा", "terms": ["जिरे", "जीरा", "jeera", "jira", "cumin"]},
-    {"canonical": "Mohari", "marathi": "मोहरी", "hindi": "राई", "terms": ["मोहरी", "राई", "mohari", "rai", "mustard seeds"]},
-    {"canonical": "Dhane", "marathi": "धने", "hindi": "धनिया", "terms": ["धने", "धनिया", "dhane", "dhaniya"]},
+    {"canonical": "Khobrel Tel", "marathi": "खोबरेल तेल", "hindi": "नारियल तेल", "terms": ["खोबरेल तेल", "पॅराशूट", "पॅराशूट तेल", "khobrel tel", "coconut oil"]},
+
+    # Nuts & Dry Fruits
+    {"canonical": "Shengdane", "marathi": "शेंगदाणे", "hindi": "मूंगफली", "terms": ["शेंगदाणे", "शेंगदाणा", "shengdane", "shengdana", "peanuts", "mungfali", "दाणे"]},
+    {"canonical": "Kaju", "marathi": "काजू", "hindi": "काजू", "terms": ["काजू", "काजू तुकडा", "kaju", "cashew"]},
+    {"canonical": "Badam", "marathi": "बदाम", "hindi": "बादाम", "terms": ["बदाम", "badam", "almond"]},
+    {"canonical": "Pista", "marathi": "पिस्ता", "hindi": "पिस्ता", "terms": ["पिस्ता", "pista", "pistachio"]},
+    {"canonical": "Manuka", "marathi": "मनुका", "hindi": "किशमिश", "terms": ["मनुका", "किशमिश", "manuka", "kismis", "kishmish", "raisins"]},
+    {"canonical": "Khobra", "marathi": "खोबरं", "hindi": "सूखा नारियल", "terms": ["खोबरं", "सुके खोबरे", "खोबरे", "khobare", "khobra", "dry coconut"]},
+    {"canonical": "Kharik", "marathi": "खारीक", "hindi": "छुहारा", "terms": ["खारीक", "खारिक", "kharik", "dry dates"]},
+    {"canonical": "Charoli", "marathi": "चारोळी", "hindi": "चिरौंजी", "terms": ["चारोळी", "charoli", "chironji"]},
+
+    # Essentials & Tea
     {"canonical": "Dudh", "marathi": "दूध", "hindi": "दूध", "terms": ["दूध", "दुध", "dudh", "doodh", "milk"]},
     {"canonical": "Sargam Dust Tea", "marathi": "सरगम पत्ती चहा", "hindi": "सरगम पत्ती चाय", "terms": ["सरगम पत्ती चहा", "सरगम चहा", "सरगम पत्ती", "सरगम", "sargam", "sargam patti chaha"]},
     {"canonical": "Super Dust Tea", "marathi": "सुपर डस्ट चहा", "hindi": "सुपर डस्ट चाय", "terms": ["सुपर डस्ट चहा", "सुपर डस्ट", "super dust", "super dust tea"]},
     {"canonical": "Wagh Bakri Tea", "marathi": "वाघ बकरी चहा", "hindi": "वाघ बकरी चाय", "terms": ["वाघ बकरी चहा", "wagh bakri"]},
     {"canonical": "Chaha", "marathi": "चहा", "hindi": "चाय", "terms": ["चहा", "चाहा", "चहा पावडर", "चहापत्ती", "chaha", "chai", "tea", "चाय"]},
-    {"canonical": "Shengdane", "marathi": "शेंगदाणे", "hindi": "मूंगफली", "terms": ["शेंगदाणे", "शेंगदाणा", "shengdane", "shengdana", "peanuts", "mungfali"]},
-    {"canonical": "Kaju", "marathi": "काजू", "hindi": "काजू", "terms": ["काजू", "kaju", "cashew"]},
-    {"canonical": "Badam", "marathi": "बदाम", "hindi": "बादाम", "terms": ["बदाम", "badam", "almond"]},
-    {"canonical": "Saban", "marathi": "साबण", "hindi": "साबुन", "terms": ["साबण", "saban", "soap", "लक्स", "संतूर", "डेटॉल"]},
-    {"canonical": "Detergent", "marathi": "डिटर्जंट पावडर", "hindi": "सर्फ", "terms": ["सर्फ", "डिटर्जंट", "detergent", "surf", "nirma"]},
-    {"canonical": "Biscuits", "marathi": "बिस्कीट", "hindi": "बिस्कुट", "terms": ["बिस्कीट", "पारले जी", "biscuit", "biscuits"]},
+    {"canonical": "Coffee", "marathi": "कॉफी", "hindi": "कॉफ़ी", "terms": ["कॉफी", "coffee", "nescafe", "bru"]},
+    {"canonical": "Saban", "marathi": "साबण", "hindi": "साबुन", "terms": ["साबण", "saban", "soap", "लक्स", "संतूर", "डेटॉल", "लाईफबॉय"]},
+    {"canonical": "Detergent", "marathi": "डिटर्जंट पावडर", "hindi": "सर्फ", "terms": ["सर्फ", "डिटर्जंट", "detergent", "surf", "nirma", "टाईड"]},
+    {"canonical": "Biscuits", "marathi": "बिस्कीट", "hindi": "बिस्कुट", "terms": ["बिस्कीट", "पारले जी", "biscuit", "biscuits", "गुड डे"]},
     {"canonical": "Patanjali Biscuit Box", "marathi": "पतंजली बिस्कीट बॉक्स", "hindi": "पतंजली बिस्कुट बॉक्स", "terms": ["पतंजली बिस्कीट बॉक्स", "patanjali biscuit box"]},
+    {"canonical": "Sarki Pend", "marathi": "सरकी पेंड", "hindi": "सरकी पेंड", "terms": ["सरकी पेंड", "सरकी पेंढ", "sarki pend", "sarkipend"]},
     {"canonical": "Celery", "marathi": "सेलरी (Celery)", "hindi": "सेलरी", "terms": ["celery", "celary", "सेलरी"]},
 ]
 
@@ -495,6 +542,10 @@ def normalize_marathi_transcript(text: str) -> str:
     # 0. Convert Indic script & digits
     s = convert_indic_script_to_devanagari(text)
     s = s.translate(DEV_TO_ASCII)
+
+    # 0b. Clean Whisper punctuation around words (commas, periods, pipes, question marks)
+    # Preserves decimals in numbers (e.g. 1.5, 0.5) and MRP slashes (10/-)
+    s = re.sub(r"(?<=\D)[,;:।|!?.]+|[,;:।|!?.]+(?=\D)|[,;:।|!?.]+$", " ", s)
 
     # 1. Deduplicate
     s = deduplicate_spoken_tokens(s)
