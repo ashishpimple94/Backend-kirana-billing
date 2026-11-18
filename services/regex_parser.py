@@ -3,11 +3,11 @@ regex_parser.py
 Fast-path Python Regex Parser for Kirana voice orders.
 Extracts items, quantities, units, prices, and spoken pronunciations instantly (<5ms).
 Handles:
-- "Sakhar 1kg 60 sath" -> Name: साखर, Qty: 1, Unit: kg, Price: 60, Pronunciation: sath
+- "sakhar 1kg 60 rupaye saath rupaye" -> Name: साखर, Qty: 1, Unit: kg, Price: 60, Pronunciation: saath
+- "साखर १ किलो ६० रुपये साठ रुपये" -> Name: साखर, Qty: 1, Unit: kg, Price: 60, Pronunciation: साठ
 - "Sugar 1kg 60 sixty" -> Name: साखर, Qty: 1, Unit: kg, Price: 60, Pronunciation: sixty
 - "Masoor 1kg 95 panchyannav" -> Name: मसूर डाळ, Qty: 1, Unit: kg, Price: 95, Pronunciation: panchyannav
 - "Patanjali biscuit box 10/- 710" -> Name: Patanjali biscuit box, Qty: 1, Unit: box, Price: 710
-- "Sakhar 120" -> Name: साखर, Qty: 1, Unit: piece, Price: 120
 """
 
 import re
@@ -57,14 +57,14 @@ KIRANA_ITEMS_MAP = {
 
 UNIT_MAP = {
     "kg": "kg", "kilo": "kg", "kilogram": "kg", "किलो": "kg", "केजी": "kg",
-    "gm": "gm", "g": "gm", "gram": "gm", "ग्रॅम": "gm",
-    "litre": "litre", "liter": "litre", "l": "litre", "लिटर": "litre",
+    "gm": "gm", "g": "gm", "gram": "gm", "ग्रॅम": "gm", "ग्राम": "gm",
+    "litre": "litre", "liter": "litre", "l": "litre", "लिटर": "litre", "लीटर": "litre",
     "ml": "ml", "मिली": "ml",
-    "packet": "packet", "pkt": "packet", "pack": "packet", "पाकीट": "packet",
+    "packet": "packet", "pkt": "packet", "pack": "packet", "पाकीट": "packet", "पुडा": "packet",
     "box": "box", "खोके": "box", "बॉक्स": "box",
     "piece": "piece", "pc": "piece", "pcs": "piece", "नग": "piece",
     "bottle": "bottle", "बाटली": "bottle",
-    "pau": "gm", "pav": "gm",
+    "pau": "gm", "pav": "gm", "पाव": "gm",
 }
 
 
@@ -79,7 +79,7 @@ def clean_unit_and_qty(raw_qty: str, raw_unit: str) -> (float, str):
     unit_key = (raw_unit or "").strip().lower()
     unit = UNIT_MAP.get(unit_key, "piece")
 
-    if unit_key in ("pau", "pav"):
+    if unit_key in ("pau", "pav", "पाव"):
         qty = 250.0
         unit = "gm"
 
@@ -114,7 +114,7 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
         matched = False
 
         # Pattern 1: MRP line (e.g. "Patanjali biscuit box 10/- 710")
-        m_mrp = re.search(r"^(.+?)\s+(\d+)\s*/-\s*(?:rupaye|rs|inr)?\s*(\d+(?:\.\d+)?)\s*$", line, re.IGNORECASE)
+        m_mrp = re.search(r"^(.+?)\s+(\d+)\s*/-\s*(?:rupaye|rs|inr|रुपये)?\s*(\d+(?:\.\d+)?)\s*$", line, re.IGNORECASE)
         if m_mrp:
             raw_name = m_mrp.group(1).strip()
             mrp_val = float(m_mrp.group(2))
@@ -134,10 +134,10 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
                 continue
 
         # Pattern 2: Pronunciation Echo Standard:
-        # e.g. "Sakhar 1kg 60 sath" or "Sugar 1kg 60 sixty" or "Masoor 1kg 95 panchyannav"
-        # Item + Qty + Unit + Price Digit + Spoken Pronunciation Word
+        # e.g. "Sakhar 1kg 60 rupaye saath rupaye", "साखर १ किलो ६० रुपये साठ रुपये", "Sugar 1kg 60 sixty"
+        # Item + Qty + Unit + Price Digit + optional currency + Spoken Pronunciation Word + optional currency
         m_echo = re.search(
-            r"^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilo|gm|gram|litre|liter|ml|packet|box|piece|pc|pcs|पाकीट|नग|किलो|ग्रॅम|लिटर)?\s+(\d+(?:\.\d+)?)\s+([a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)\s*$",
+            r"^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilo|gm|gram|litre|liter|ml|packet|box|piece|pc|pcs|पाकीट|नग|किलो|ग्रॅम|ग्राम|लिटर|लीटर)?\s+(\d+(?:\.\d+)?)\s*(?:rupaye|rupayan|rupees|rs|inr|रुपये|रुपया)?\s*([a-zA-Z\u0900-\u097F]+(?:\s+[a-zA-Z\u0900-\u097F]+)?)\s*(?:rupaye|rupayan|rupees|rs|inr|रुपये|रुपया)?\s*$",
             line,
             re.IGNORECASE
         )
@@ -147,6 +147,9 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
             raw_unit = m_echo.group(3) or "piece"
             price_digit = float(m_echo.group(4))
             echo_word = m_echo.group(5).strip()
+
+            # Clean currency words from echo if attached
+            echo_word_clean = re.sub(r"(?:\s*(?:rupaye|rupayan|rupees|rs|रुपये|रुपया))+$", "", echo_word, flags=re.IGNORECASE).strip() or echo_word
 
             if price_digit < 15000:
                 qty, unit = clean_unit_and_qty(raw_qty, raw_unit)
@@ -160,15 +163,15 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
                     "unit": unit,
                     "price": unit_price,
                     "amount": amount,
-                    "spoken_pronunciation": echo_word,
+                    "spoken_pronunciation": echo_word_clean,
                 })
                 matched = True
                 continue
 
-        # Pattern 3: Standard Item + Qty + Unit + Spoken Number / Digits
+        # Pattern 3: Standard Item + Qty + Unit + Price part
         # e.g. "Sakhar 1kg 120" or "Besan 1kg ekshe tees" or "Gahu 10kg chaarshey saath"
         m_std = re.search(
-            r"^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilo|gm|gram|litre|liter|ml|packet|box|piece|pc|pcs|पाकीट|नग|किलो|ग्रॅम|लिटर)\s+(.+)$",
+            r"^(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilo|gm|gram|litre|liter|ml|packet|box|piece|pc|pcs|पाकीट|नग|किलो|ग्रॅम|ग्राम|लिटर|लीटर)\s+(.+)$",
             line,
             re.IGNORECASE
         )
@@ -196,9 +199,8 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
                 matched = True
                 continue
 
-        # Pattern 4: Bare Item + Price
-        # e.g. "Sakhar 120" or "Besan 130" or "Maida 140" or "Chai 230"
-        m_bare = re.search(r"^([a-zA-Z\u0900-\u097F\s]+?)\s+(\d+(?:\.\d+)?)\s*$", line)
+        # Pattern 4: Bare Item + Price (e.g. "Sakhar 120", "Besan 130")
+        m_bare = re.search(r"^([a-zA-Z\u0900-\u097F\s]+?)\s+(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|रुपये)?\s*$", line)
         if m_bare:
             raw_name = m_bare.group(1).strip()
             price_val = float(m_bare.group(2))
@@ -216,9 +218,10 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
                 continue
 
         # Pattern 5: Bare Item + Word Price (e.g. "Sakhar ekshey vees", "Besan one thirty")
+        line_clean = re.sub(r"\b(?:rupaye|rupees|rs|रुपये)\b", "", line, flags=re.IGNORECASE).strip()
         for phrase, val in sorted(COMPOUND_PRICING_MAP.items(), key=lambda x: len(x[0]), reverse=True):
-            if line.lower().endswith(phrase):
-                raw_name = line[:len(line) - len(phrase)].strip()
+            if line_clean.lower().endswith(phrase) or line_clean.endswith(phrase):
+                raw_name = line_clean[:len(line_clean) - len(phrase)].strip()
                 if raw_name:
                     name = clean_item_name(raw_name)
                     items.append({
