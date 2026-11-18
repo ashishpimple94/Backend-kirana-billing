@@ -238,6 +238,7 @@ UNITS_AND_TENS_MAP = {
     "पंच्याऐंशी": 85, "panchaishi": 85, "पचासी": 85,
     "शहाऐंशी": 86, "सत्याऐंशी": 87, "अठ्ठ्याऐंशी": 88, "atthyaainshi": 88,
     "एकोणनव्वद": 89, "aainshi": 80, "ainshi": 80, "aishi": 80, "assi": 80, "ऐंशी": 80, "अस्सी": 80, "eighty": 80,
+    "आईशी": 80, "आइंशी": 80, "ऐशी": 80, "अऐंशी": 80, "आयशी": 80,
 
     # 70s
     "एकाहत्तर": 71, "बहात्तर": 72, "त्र्याहत्तर": 73, "चौऱ्याहत्तर": 74,
@@ -405,6 +406,7 @@ MARATHI_KIRANA_ITEMS = [
     # Grains & Flours
     {"canonical": "Tandul", "marathi": "तांदूळ", "hindi": "चावल", "terms": ["तांदूळ", "तांदुळ", "तान्दूल", "तान्दुल", "tandul", "tandool", "tandur", "chawal", "rice", "भात", "कोलम", "बासमती", "इंद्रायणी", "तुकडा", "जिरा राईस"]},
     {"canonical": "Pohe", "marathi": "पोहे", "hindi": "पोहा", "terms": ["पोहे", "पोहा", "pohe", "poha", "जाडे पोहे", "पातळ पोहे"]},
+    {"canonical": "Murmure", "marathi": "मुरमुरे", "hindi": "मुरमुरे", "terms": ["मुरमुरे", "मुरमुरा", "मूर्मूरी", "मूरे", "मुरमुऱ्या", "मुरमूरे", "मुरमूर", "murmura", "murmure", "murmuri", "लाया", "भेळ मुरमुरे"]},
     {"canonical": "Bajri", "marathi": "बाजरी", "hindi": "बाजरा", "terms": ["बाजरी", "बाजरा", "bajri", "bajara", "bajra", "बाजरीचे पीठ"]},
     {"canonical": "Gahu", "marathi": "गहू", "hindi": "गेहूं", "terms": ["गहू", "गहु", "gahu", "gehu", "wheat", "लोकवन", "सीहोर"]},
     {"canonical": "Atta", "marathi": "गव्हाचे पीठ", "hindi": "आटा", "terms": ["गव्हाचे पीठ", "गहू आटा", "गहू पीठ", "कणिक", "आटा", "gahu aata", "gahu pith", "gahu peeth", "gehu atta", "atta", "aata", "wheat flour", "चक्की आटा"]},
@@ -582,6 +584,12 @@ def normalize_marathi_transcript(text: str) -> str:
     s = re.sub(make_unicode_regex(r"एकशिचाईस|एकशिचारीफ|एकशेचाईस|एकशे\s*चाईस"), "140", s)
     s = re.sub(make_unicode_regex(r"पस्चे\s*पन्नस|पश्य\s*पन्नास"), "550 रुपये", s)
     s = re.sub(make_unicode_regex(r"रोपेज|रुपेज|रोबइ|रोपई|रुब्बाई|रुपिज|रुपीज"), "रुपये", s)
+    # Murmura (puffed rice) - Whisper often spells it in various ways
+    s = re.sub(make_unicode_regex(r"मूर्मूरी|मूरे|मुरमुऱ्या|मुरमूरे|मुरमूर|मुरमुर"), "मुरमुरे", s)
+    # Number word phonetic corrections for Whisper output
+    s = re.sub(make_unicode_regex(r"आईशी|आइंशी|आयशी|अऐंशी|ऐशी"), "ऐंशी", s)
+    s = re.sub(make_unicode_regex(r"सत्याहत्तर|सत्याहत्तर"), "सत्तर", s)  # 70 variants
+    s = re.sub(make_unicode_regex(r"पन्नस|पन्ना|पणनस"), "पन्नास", s)  # 50 variants
 
     # 5. Spoken numbers to digits (1 to 5000)
     s = parse_marathi_spoken_numbers(s)

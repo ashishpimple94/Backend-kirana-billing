@@ -234,12 +234,9 @@ def sanitize_items(raw_items: List[Dict[str, Any]], price_mode: str = "per_unit"
             flags=re.IGNORECASE,
         ).strip()
 
-        if not raw_name or re.match(r"^[\d\s.,;+!?-]+$", raw_name):
-            continue
-
-        name = clean_item_name(raw_name)
+        name = clean_item_name(raw_name) if raw_name else ""
         if not name or re.match(r"^[\d\s.,;+!?-]+$", name):
-            continue
+            name = "Item"
 
         # Quantity validation
         try:

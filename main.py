@@ -234,14 +234,20 @@ async def api_voice_to_bill(
                     price_mode=priceMode,
                     output_lang=outputLang,
                 )
-                print(f"[FastAPI voice-to-bill] {name} attempt {attempt}: {len(res.get('items', []))} items. Transcript: \"{res.get('transcript')}\"")
-                return {
-                    "success": True,
-                    "transcript": res.get("transcript", ""),
-                    "items": res.get("items", []),
-                    "priceMode": priceMode,
-                    "provider": res.get("provider", name),
-                }
+                got_items = res.get("items", [])
+                transcript_got = res.get("transcript", "")
+                print(f"[FastAPI voice-to-bill] {name} attempt {attempt}: {len(got_items)} items. Transcript: \"{transcript_got}\"")
+                # If we got items OR this is the final provider, return result
+                if got_items or name == (providers[-1][0] if providers else name):
+                    return {
+                        "success": True,
+                        "transcript": transcript_got,
+                        "items": got_items,
+                        "priceMode": priceMode,
+                        "provider": res.get("provider", name),
+                    }
+                # 0 items — try next provider
+                break
             except Exception as e:
                 last_err = e
                 print(f"[FastAPI voice-to-bill] {name} attempt {attempt} failed: {e}")
