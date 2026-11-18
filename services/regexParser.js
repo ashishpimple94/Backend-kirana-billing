@@ -106,8 +106,16 @@ function parseBillWithRegex(transcript, options = {}) {
   const outputLang = options.outputLang || null;
   if (!transcript || !transcript.trim()) return [];
 
+  // 0. Normalize slash units: e.g. "1 kg / kilo", "1kg/kilo", "1 kg /kilo", "1kg / kilo"
+  let text = transcript.replace(/(\d+(?:\.\d+)?)\s*(?:kg|kilo|किलो)\s*\/\s*(?:kilo|kg|किलो)/gi, '$1 kg');
+  text = text.replace(/(?:kg|kilo|किलो)\s*\/\s*(?:kilo|kg|किलो)/gi, ' kg ');
+  text = text.replace(/(\d+(?:\.\d+)?)\s*\/\s*(?:kilo|kg|किलो)/gi, '$1 kg');
+  text = text.replace(/(\d+(?:\.\d+)?)\s*(?:litre|liter|लिटर)\s*\/\s*(?:litre|liter|लिटर)/gi, '$1 litre');
+  text = text.replace(/(?:litre|liter|लिटर)\s*\/\s*(?:litre|liter|लिटर)/gi, ' litre ');
+  text = text.replace(/(\d+(?:\.\d+)?)\s*\/\s*(?:litre|liter|लिटर)/gi, '$1 litre');
+
   // 1. First parse spoken numbers (Marathi, Hindi, English compound numbers) into digits
-  let text = parseMarathiSpokenNumbers(transcript);
+  text = parseMarathiSpokenNumbers(text);
   text = normalizeMarathiTranscript(text);
   text = normalizeNumberWords(text);
   text = text.replace(/[,;+\n]+/g, ' , ');
