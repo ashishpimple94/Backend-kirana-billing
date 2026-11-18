@@ -260,12 +260,17 @@ async def create_bill(bill_in: BillCreateRequest):
     if db is None:
         raise HTTPException(status_code=503, detail="Database not configured")
 
-    # Generate unique billNumber if not supplied
-    bill_number = bill_in.billNumber or f"BILL-{int(time.time())}"
+    # Generate unique billNumber if not supplied or if it already exists
+    final_bill_number = bill_in.billNumber or f"BILL-{int(time.time())}"
+    existing = await db.bills.find_one({"billNumber": final_bill_number})
+    if existing:
+        final_bill_number = f"{final_bill_number}-{int(time.time() * 1000) % 10000}"
+        while await db.bills.find_one({"billNumber": final_bill_number}):
+            final_bill_number = f"{bill_in.billNumber or 'BILL'}-{int(time.time() * 1000) % 100000}"
 
     # Build Bill model instance with computed totals
     bill_obj = Bill(
-        billNumber=bill_number,
+        billNumber=final_bill_number,
         customerName=bill_in.customerName or "Walk-in Customer",
         customerMobile=bill_in.customerMobile or "",
         items=bill_in.items,
@@ -282,7 +287,17 @@ async def create_bill(bill_in: BillCreateRequest):
         bill_obj.subtotal = bill_in.subtotal
 
     bill_doc = bill_obj.to_mongo()
-    res = await db.bills.insert_one(bill_doc)
+    try:
+        res = await db.bills.insert_one(bill_doc)
+    except Exception as e:
+        if "duplicate key" in str(e).lower() or "11000" in str(e):
+            final_bill_number = f"{bill_in.billNumber or 'BILL'}-{int(time.time() * 1000) % 100000}"
+            bill_obj.billNumber = final_bill_number
+            bill_doc = bill_obj.to_mongo()
+            res = await db.bills.insert_one(bill_doc)
+        else:
+            raise
+
     bill_doc["_id"] = str(res.inserted_id)
 
     return {
