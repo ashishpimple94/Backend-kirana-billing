@@ -27,13 +27,12 @@ from services.marathi_normalizer import (
     convert_bill_line_to_speech,
 )
 from services.regex_parser import parse_bill_with_regex
-from services.ai_service import (
-    parse_with_gemini,
-    parse_transcript_with_gemini,
-    parse_audio_with_groq,
-    parse_transcript_with_groq,
-    GEMINI_API_KEY,
-    GROQ_API_KEY,
+from services.llm_service import (
+    GroqProvider,
+    GeminiProvider,
+    OpenAIProvider,
+    get_llm_provider,
+    sanitize_items,
 )
 from models.bill import Bill, BillItem, BillCreateRequest
 from models_schema import (
@@ -67,8 +66,9 @@ async def health_check():
         "service": "bilzy-kirana-fastapi",
         "database": {"status": db_status},
         "providers": {
-            "gemini": bool(GEMINI_API_KEY),
-            "groq": bool(GROQ_API_KEY),
+            "gemini": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+            "groq": bool(os.getenv("GROQ_API_KEY")),
+            "openai": bool(os.getenv("OPENAI_API_KEY")),
         },
         "version": "2.0.0",
     }
@@ -95,7 +95,7 @@ async def api_number_to_words(req: NumberToWordsRequest):
 async def api_parse_bill(req: ParseBillRequest):
     """
     Parses a Kirana spoken order transcript into structured line items.
-    Tries instantaneous Fast-Path Regex Parser (<5ms), then falls back to Groq/Gemini.
+    Tries instantaneous Fast-Path Regex Parser (<5ms), then falls back to Groq -> OpenAI -> Gemini.
     """
     t_start = time.time()
     transcript = req.transcript.strip()
@@ -118,39 +118,38 @@ async def api_parse_bill(req: ParseBillRequest):
             "elapsedMs": elapsed_ms,
         }
 
-    # 2. AI Provider: Groq (fastest ~200ms) or Gemini
-    if GROQ_API_KEY:
+    # 2. AI Provider cascade: Groq -> OpenAI -> Gemini
+    providers = []
+    if os.getenv("GROQ_API_KEY"):
+        providers.append(("groq", GroqProvider()))
+    if os.getenv("OPENAI_API_KEY"):
+        providers.append(("openai", OpenAIProvider()))
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        providers.append(("gemini", GeminiProvider()))
+
+    for name, prov in providers:
         try:
-            groq_res = await parse_transcript_with_groq(transcript)
-            if groq_res and groq_res.get("items"):
+            res = await prov.parse_transcript(
+                transcript=transcript,
+                language=req.language or "mr-IN",
+                price_mode=req.priceMode or "per_unit",
+            )
+            if res and res.get("items"):
                 return {
                     "success": True,
-                    "transcript": transcript,
-                    "items": groq_res["items"],
+                    "transcript": res.get("transcript") or transcript,
+                    "items": res.get("items", []),
                     "priceMode": req.priceMode,
-                    "provider": groq_res.get("provider", "groq"),
+                    "provider": res.get("provider", name),
                 }
         except Exception as e:
-            print(f"[FastAPI parse-bill] Groq fallback failed: {e}")
-
-    if GEMINI_API_KEY:
-        try:
-            gemini_res = await parse_transcript_with_gemini(transcript, req.language)
-            return {
-                "success": True,
-                "transcript": transcript,
-                "items": gemini_res.get("items", []),
-                "priceMode": req.priceMode,
-                "provider": gemini_res.get("provider", "gemini"),
-            }
-        except Exception as e:
-            print(f"[FastAPI parse-bill] Gemini fallback failed: {e}")
+            print(f"[FastAPI parse-bill] {name} fallback failed: {e}")
 
     # Fallback to regex results
     return {
         "success": True,
         "transcript": transcript,
-        "items": fast_items,
+        "items": fast_items or [],
         "priceMode": req.priceMode,
         "provider": "regex-fallback",
     }
@@ -164,8 +163,8 @@ async def api_voice_to_bill(
     """
     Receives voice audio (file upload, binary body, or JSON with base64)
     and converts it into bill items with spoken pronunciations.
+    Provider cascade: Groq Whisper Large v3 Turbo -> OpenAI -> Gemini.
     """
-    # Extract query params as defaults
     qp = request.query_params
     language = qp.get("language", "mr-IN")
     priceMode = qp.get("priceMode", "per_unit")
@@ -215,37 +214,41 @@ async def api_voice_to_bill(
             detail="Audio data is required. Please upload an audio file or base64 audio."
         )
 
-    # 1. Groq Whisper (ultra fast ~300ms) + FastPath Regex
-    if GROQ_API_KEY:
-        try:
-            res = await parse_audio_with_groq(audio_bytes, "recording.m4a", language)
-            return {
-                "success": True,
-                "transcript": res.get("transcript", ""),
-                "items": res.get("items", []),
-                "priceMode": priceMode,
-                "provider": res.get("provider", "groq-whisper"),
-            }
-        except Exception as e:
-            print(f"[FastAPI voice-to-bill] Groq failed: {e}")
+    # Provider cascade: Groq -> OpenAI -> Gemini
+    providers = []
+    if os.getenv("GROQ_API_KEY"):
+        providers.append(("groq", GroqProvider()))
+    if os.getenv("OPENAI_API_KEY"):
+        providers.append(("openai", OpenAIProvider()))
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        providers.append(("gemini", GeminiProvider()))
 
-    # 2. Gemini fallback
-    if GEMINI_API_KEY:
-        try:
-            res = await parse_with_gemini(audio_bytes, mime_type, language)
-            return {
-                "success": True,
-                "transcript": res.get("transcript", ""),
-                "items": res.get("items", []),
-                "priceMode": priceMode,
-                "provider": res.get("provider", "gemini"),
-            }
-        except Exception as e:
-            print(f"[FastAPI voice-to-bill] Gemini failed: {e}")
+    last_err = None
+    for name, prov in providers:
+        for attempt in range(1, 3):
+            try:
+                res = await prov.parse_audio(
+                    audio_bytes=audio_bytes,
+                    mime_type=mime_type,
+                    language=language,
+                    price_mode=priceMode,
+                    output_lang=outputLang,
+                )
+                print(f"[FastAPI voice-to-bill] {name} attempt {attempt}: {len(res.get('items', []))} items. Transcript: \"{res.get('transcript')}\"")
+                return {
+                    "success": True,
+                    "transcript": res.get("transcript", ""),
+                    "items": res.get("items", []),
+                    "priceMode": priceMode,
+                    "provider": res.get("provider", name),
+                }
+            except Exception as e:
+                last_err = e
+                print(f"[FastAPI voice-to-bill] {name} attempt {attempt} failed: {e}")
 
     raise HTTPException(
         status_code=500,
-        detail="Audio processing failed. Please check your API keys or network connection."
+        detail=f"Audio processing failed: {str(last_err)}"
     )
 
 
