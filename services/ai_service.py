@@ -16,6 +16,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 from services.regex_parser import parse_bill_with_regex
+from services.llm_service import MARATHI_WHISPER_PROMPT
 
 # Load API keys from environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
@@ -144,6 +145,7 @@ async def parse_audio_with_groq(audio_bytes: bytes, filename: str = "voice.m4a",
         model="whisper-large-v3-turbo",
         language=language[:2] if language else "mr",
         temperature=0.0,
+        prompt=MARATHI_WHISPER_PROMPT,
     )
     transcript_text = (transcription.text or "").strip()
 
