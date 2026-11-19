@@ -13,6 +13,7 @@ Supports:
 """
 
 import re
+import difflib
 from typing import Optional, Tuple, Dict, Any, List
 
 # 0. Deduplicate repeated speech tokens or acoustic stutters (e.g. sakhar-sakhar -> sakhar, साखर-साखर -> साखर)
@@ -500,17 +501,37 @@ MARATHI_KIRANA_ITEMS = [
     {"canonical": "Wagh Bakri Tea", "marathi": "वाघ बकरी चहा", "hindi": "वाघ बकरी चाय", "terms": ["वाघ बकरी चहा", "wagh bakri"]},
     {"canonical": "Chaha", "marathi": "चहा", "hindi": "चाय", "terms": ["चहा", "चाहा", "चहा पावडर", "चहापत्ती", "chaha", "chai", "tea", "चाय"]},
     {"canonical": "Coffee", "marathi": "कॉफी", "hindi": "कॉफ़ी", "terms": ["कॉफी", "coffee", "nescafe", "bru"]},
-    {"canonical": "Saban", "marathi": "साबण", "hindi": "साबुन", "terms": ["साबण", "saban", "soap", "लक्स", "संतूर", "डेटॉल", "लाईफबॉय"]},
-    {"canonical": "Detergent", "marathi": "डिटर्जंट पावडर", "hindi": "सर्फ", "terms": ["सर्फ", "डिटर्जंट", "detergent", "surf", "nirma", "टाईड"]},
+    {"canonical": "Saban", "marathi": "साबण", "hindi": "साबुन", "terms": [
+        "साबण", "saban", "soap", "saban soap", "soap saban", "साबण सोप", "साबुन", "अंगाचा साबण", "कपड्यांचा साबण", "bath soap",
+        "लक्स", "संतूर", "डेटॉल", "लाईफबॉय", "lux", "santoor", "dettol", "lifebuoy", "rin", "रिन", "vim", "vim bar", "विम बार"
+    ]},
+    {"canonical": "Detergent", "marathi": "डिटर्जंट पावडर", "hindi": "सर्फ", "terms": [
+        "डिटर्जंट पावडर", "डिटर्जंट", "डिटर्जेंट", "detergent", "dtergent", "detergent powder", "washing powder", "वॉशिंग पावडर",
+        "powder", "पावडर", "सर्फ", "surf", "surf excel", "सर्फ एक्सेल", "nirma", "निरमा", "tide", "टाईड", "wheel", "व्हील", "ghadi", "घडी", "एरियल", "ariel"
+    ]},
     {"canonical": "Biscuits", "marathi": "बिस्कीट", "hindi": "बिस्कुट", "terms": ["बिस्कीट", "पारले जी", "biscuit", "biscuits", "गुड डे"]},
     {"canonical": "Patanjali Biscuit Box", "marathi": "पतंजली बिस्कीट बॉक्स", "hindi": "पतंजली बिस्कुट बॉक्स", "terms": ["पतंजली बिस्कीट बॉक्स", "patanjali biscuit box"]},
     {"canonical": "Sarki Pend", "marathi": "सरकी पेंड", "hindi": "सरकी पेंड", "terms": ["सरकी पेंड", "सरकी पेंढ", "sarki pend", "sarkipend"]},
     {"canonical": "Celery", "marathi": "सेलरी (Celery)", "hindi": "सेलरी", "terms": ["celery", "celary", "सेलरी"]},
 ]
 
+# Fast Pre-indexed Catalog Map for O(1) & difflib fuzzy lookups
+CATALOG_TERMS_INDEX: Dict[str, Dict[str, Any]] = {}
+ALL_CATALOG_TERMS: List[str] = []
+for entry in MARATHI_KIRANA_ITEMS:
+    for term in entry["terms"]:
+        tl = term.lower().strip()
+        if tl not in CATALOG_TERMS_INDEX:
+            CATALOG_TERMS_INDEX[tl] = entry
+            ALL_CATALOG_TERMS.append(tl)
+
 
 def canonicalize_marathi_item_name(name: str, language: str = "mr-IN", output_lang: Optional[str] = None) -> str:
-    """Canonicalizes item name according to dialect & output language."""
+    """
+    Canonicalizes item name according to dialect & output language.
+    Uses exact lookup followed by Python's built-in difflib fuzzy matching
+    to catch typos and spoken variants like 'dtergent', 'powder', 'saban soap'.
+    """
     if not name or not isinstance(name, str):
         return ""
     converted = convert_indic_script_to_devanagari(name)
@@ -523,19 +544,32 @@ def canonicalize_marathi_item_name(name: str, language: str = "mr-IN", output_la
     is_english = lang_lower.startswith("en") or str(output_lang or "").lower().startswith("en")
     is_marathi = not is_english and (lang_lower.startswith("mr") or not is_hindi)
 
+    def _format_entry(entry: Dict[str, Any]) -> str:
+        if is_english:
+            return entry["canonical"]
+        if is_hindi:
+            return entry["hindi"]
+        if is_marathi:
+            return entry["marathi"]
+        return entry["canonical"]
+
     stripped = re.sub(r"(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$", "", clean, flags=re.IGNORECASE).strip()
 
-    for entry in MARATHI_KIRANA_ITEMS:
-        for term in entry["terms"]:
-            term_lower = term.lower()
-            if clean == term_lower or stripped == term_lower:
-                if is_english:
-                    return entry["canonical"]
-                if is_hindi:
-                    return entry["hindi"]
-                if is_marathi:
-                    return entry["marathi"]
-                return entry["canonical"]
+    # 1. Exact match in catalog terms
+    if clean in CATALOG_TERMS_INDEX:
+        return _format_entry(CATALOG_TERMS_INDEX[clean])
+    if stripped in CATALOG_TERMS_INDEX:
+        return _format_entry(CATALOG_TERMS_INDEX[stripped])
+
+    # 2. Sub-term lookup for spoken compound echoes (e.g. "saban soap", "detergent powder", "washing powder")
+    for term, entry in CATALOG_TERMS_INDEX.items():
+        if len(term) >= 4 and term in clean:
+            return _format_entry(entry)
+
+    # 3. Built-in Python difflib fuzzy match (catches typos like 'dtergent' -> 'detergent')
+    close_matches = difflib.get_close_matches(clean, ALL_CATALOG_TERMS, n=1, cutoff=0.72)
+    if close_matches:
+        return _format_entry(CATALOG_TERMS_INDEX[close_matches[0]])
 
     if is_devanagari:
         stripped_dev = re.sub(r"(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$", "", deduped, flags=re.IGNORECASE).strip()
