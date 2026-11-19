@@ -545,27 +545,36 @@ def normalize_marathi_transcript(text: str) -> str:
     s = convert_indic_script_to_devanagari(text)
     s = s.translate(DEV_TO_ASCII)
 
-    # 0b. Clean Whisper punctuation around words (commas, periods, pipes, question marks)
-    # Preserves decimals in numbers (e.g. 1.5, 0.5) and MRP slashes (10/-)
-    s = re.sub(r"(?<=\D)[,;:।|!?.]+|[,;:।|!?.]+(?=\D)|[,;:।|!?.]+$", " ", s)
+    # 0b. Preserve clause boundaries (commas, semicolons, pipes, danda) as spaced commas ' , '
+    # Clean sentence-ending exclamation marks, question marks, and standalone periods
+    s = re.sub(r"[,;:।|]+", " , ", s)
+    s = re.sub(r"[!?.]+(?=\s|$)", " ", s)
 
     # 1. Deduplicate
     s = deduplicate_spoken_tokens(s)
 
-    # 2. Un-glue numeral + unit compounds
-    s = re.sub(r"(?:^|\s)(?:ekkilo|ekkilu|ekilo|एककिलो|एककिलू|एककिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:donkilo|donkilu|दोनकिलो|दोनकिलू|दोनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:tinkilo|tinkilu|तीनकिलो|तीनकिलू|तीनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 3 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:charkilo|charkilu|चारकिलो|चारकिलू|चारकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 4 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:pachkilo|pachkilu|पाचकिलो|पाचकिलू|पाचकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 5 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:dahakilo|dahakilu|दहाकिलो|दहाकिलू|दहाकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 10 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:pavkilo|pavkilu|पावकिलो|पावशेर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 250 gm ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:ardhakilo|ardhakilu|अर्धाकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 gm ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:didshekilo|didkilo|दीडकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1.5 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:adichkilo|अडीचकिलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2.5 kg ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:ekliter|eklitre|एकलिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1 litre ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:donliter|donlitre|दोनलिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2 litre ", s, flags=re.IGNORECASE)
-    s = re.sub(r"(?:^|\s)(?:ardhaliter|अर्धालिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 ml ", s, flags=re.IGNORECASE)
+    # 2. Un-glue numeral + unit compounds and fractional weights (with and without space)
+    s = re.sub(r"(?:^|\s)(?:pavkilo|pavkilu|पावकिलो|पाव\s*किलो|पावशेर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 250 gm ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:ardhakilo|ardhakilu|अर्धाकिलो|अर्धा\s*किलो|आधा\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 gm ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:paunkilo|paunkilu|पाऊणकिलो|पाऊण\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 750 gm ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:savvakilo|savvakilu|सव्वाकिलो|सव्वा\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1.25 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:didshekilo|didkilo|दीडकिलो|दीड\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1.5 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:adichkilo|अडीचकिलो|अडीच\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2.5 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:sadeteenkilo|साडेतीन\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 3.5 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:sadecharkilo|साडेचार\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 4.5 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:sadepachkilo|साडेपाच\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 5.5 kg ", s, flags=re.IGNORECASE)
+
+    s = re.sub(r"(?:^|\s)(?:ekkilo|ekkilu|ekilo|एककिलो|एक\s*किलो|एककिलू|एककिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:donkilo|donkilu|दोनकिलो|दोन\s*किलो|दोनकिलू|दोनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:tinkilo|tinkilu|तीनकिलो|तीन\s*किलो|तीनकिलू|तीनकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 3 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:charkilo|charkilu|चारकिलो|चार\s*किलो|चारकिलू|चारकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 4 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:pachkilo|pachkilu|पाचकिलो|पाच\s*किलो|पाचकिलू|पाचकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 5 kg ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:dahakilo|dahakilu|दहाकिलो|दहा\s*किलो|दहाकिलू|दहाकिलु)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 10 kg ", s, flags=re.IGNORECASE)
+
+    s = re.sub(r"(?:^|\s)(?:pavlater|pavliter|पावलिटर|पाव\s*लिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 250 ml ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:ardhaliter|अर्धालिटर|अर्धा\s*लिटर|आधा\s*लिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 ml ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:ekliter|eklitre|एकलिटर|एक\s*लिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 1 litre ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:donliter|donlitre|दोनलिटर|दोन\s*लिटर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 2 litre ", s, flags=re.IGNORECASE)
 
     # 3. Normalize unit slashes
     s = re.sub(r"(\d+(?:\.\d+)?)\s*(?:kg|kilo|किलो)\s*/\s*(?:kilo|kg|किलो)", r"\1 kg", s, flags=re.IGNORECASE)
