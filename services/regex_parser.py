@@ -99,6 +99,12 @@ def _make_item(name, qty, unit, price, price_mode="per_unit"):
     }
 
 
+FILLER_WORDS = set([
+    "टाका", "द्या", "पाहिजे", "घ्या", "करा", "आणखी", "आहे", "नाही", "दे", "दो", "लाओ",
+    "baba", "dya", "taka", "de", "do", "bolo", "chala", "please", "bhai", "ani", "and", "aur", "va", "next", "then"
+])
+
+
 def parse_segment(seg: str, options: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     s = seg.strip()
     if not s:
@@ -128,134 +134,66 @@ def parse_segment(seg: str, options: Optional[Dict[str, Any]] = None) -> List[Di
             "spoken_pronunciation": None,
         }]
 
-    # 2. Pattern A: [Name] [Qty] [Unit] [Price] (e.g. "साखर 2 kg 60 rs", "मुरमुरे 1 kg 80 rs")
-    m = re.search(
-        r"^([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{0,35}?)\s+(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(2), m.group(3))
-        name = clean_item_name(m.group(1), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, float(m.group(4)), price_mode)]
+    price = 0.0
+    qty = 1.0
+    unit = "piece"
+    has_explicit_qty = False
+    has_explicit_price = False
 
-    # 3. Pattern B: [Qty] [Unit] [Name] [Price] (e.g. "2 kg साखर 60 rs", "1 kg मैदा 40 rs")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
-        name = clean_item_name(m.group(3), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, float(m.group(4)), price_mode)]
+    working = s
 
-    # 3b. Pattern: [Qty] [Unit] [Price] [Name] (e.g. "1 kg 60 rs sakhar")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
-        name = clean_item_name(m.group(4), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, float(m.group(3)), price_mode)]
+    # 1. Extract Price with currency: '60 rs', '50 रुपये', '80 , rs'
+    price_m = re.search(rf"(\d+(?:\.\d+)?)\s*(?:,\s*)?{CURR_RE}", working, re.IGNORECASE)
+    if price_m:
+        price = float(price_m.group(1))
+        has_explicit_price = True
+        working = working[:price_m.start()] + " " + working[price_m.end():]
 
-    # 4. Pattern E: [Qty] [Name] [Unit] [Price] (e.g. "2 पार्ले box 120 rs")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,30}?)\s+(" + UNIT_RE + r")\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(1), m.group(3))
-        name = clean_item_name(m.group(2), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, float(m.group(4)), price_mode)]
+    # 2. Extract Quantity & Unit: '2 kg', '1 किलो', '500 gm', '1 , kg'
+    qty_unit_m = re.search(rf"(\d+(?:\.\d+)?)\s*(?:,\s*)?({UNIT_RE})\b", working, re.IGNORECASE)
+    if qty_unit_m:
+        qty, unit = clean_unit_and_qty(qty_unit_m.group(1), qty_unit_m.group(2))
+        has_explicit_qty = True
+        working = working[:qty_unit_m.start()] + " " + working[qty_unit_m.end():]
 
-    # 5. Pattern QNP: [Qty] [Name] [Price] with explicit currency (e.g. "5 मॅगी 50 rs", "2 साबण 40 rs")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,30}?)\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"\s*" + CURR_RE + r"$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        raw_name = m.group(2).strip()
-        if not re.match(r"^(" + UNIT_RE + r"|" + CURR_RE + r")$", raw_name, re.IGNORECASE):
-            name = clean_item_name(raw_name, language, output_lang)
-            return [_make_item(name or "Item", float(m.group(1)), "piece", float(m.group(3)), price_mode)]
+    # 3. If price still 0, check trailing bare number: e.g. 'sakhar 2 kg 60', 'काहीतरी 2 kg 100'
+    if not has_explicit_price:
+        trailing_num_m = re.search(r"\b(\d+(?:\.\d+)?)\s*$", working)
+        if trailing_num_m:
+            num_val = float(trailing_num_m.group(1))
+            price = num_val
+            has_explicit_price = True
+            working = working[:trailing_num_m.start()].strip()
 
-    # 6. Pattern: [Name] [Price] with currency (e.g. "साखर 40 rs", "बेसन 50 rs")
-    m = re.search(
-        r"^([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)\s+(\d+(?:\.\d+)?)\s*" + CURR_RE + r"$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        raw_name = m.group(1).strip()
-        if not re.match(r"^(" + UNIT_RE + r"|" + CURR_RE + r")$", raw_name, re.IGNORECASE):
-            name = clean_item_name(raw_name, language, output_lang)
-            return [_make_item(name or "Item", 1.0, "piece", float(m.group(2)), price_mode)]
+    # 4. If qty still not found, check leading bare number: e.g. '2 colgate 40 rs' -> qty=2
+    if not has_explicit_qty:
+        leading_qty_m = re.search(r"^\s*(\d+(?:\.\d+)?)\s+", working)
+        if leading_qty_m:
+            qty = float(leading_qty_m.group(1))
+            has_explicit_qty = True
+            working = working[leading_qty_m.end():].strip()
 
-    # 7. Pattern: [Qty] [Unit] [Name] (no price, e.g. "2 kg साखर", "1 kg मैदा", "1 litre तेल")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
-        name = clean_item_name(m.group(3), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, 0.0, price_mode)]
+    # 5. Extract item name from remaining words
+    tokens = [w for w in re.split(r"[\s,;.+\-]+", working) if w]
+    cleaned_tokens = [w for w in tokens if w.lower() not in FILLER_WORDS and not re.match(rf"^({CURR_RE}|{UNIT_RE})$", w, re.IGNORECASE)]
 
-    # 8. Pattern: [Name] [Qty] [Unit] (no price, e.g. "साखर 2 kg", "मैदा 1 kg", "पोहे 500 gm")
-    m = re.search(
-        r"^([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)\s+(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(2), m.group(3))
-        name = clean_item_name(m.group(1), language, output_lang)
-        return [_make_item(name or "Item", qty, unit, 0.0, price_mode)]
+    raw_name = " ".join(cleaned_tokens).strip()
 
-    # 9. Pattern: [Qty] [Unit] [Price] (no name, e.g. "1 kg 80 rs")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
-        return [_make_item("Item", qty, unit, float(m.group(3)), price_mode)]
+    # If quantity was not explicit and raw_name has a bare number (e.g. 'pant 1'):
+    if not has_explicit_qty and raw_name:
+        bare_num_m = re.search(r"\b(\d+(?:\.\d+)?)\b", raw_name)
+        if bare_num_m:
+            qty = float(bare_num_m.group(1))
+            raw_name = (raw_name[:bare_num_m.start()] + " " + raw_name[bare_num_m.end():]).strip()
 
-    # 10. Pattern: [Qty] [Name] (no unit, no price, e.g. "1 lux", "2 santoor", "3 maggi")
-    m = re.search(
-        r"^(\d+(?:\.\d+)?)\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,30}?)$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        raw_name = m.group(2).strip()
-        if not re.match(r"^(" + UNIT_RE + r"|" + CURR_RE + r")$", raw_name, re.IGNORECASE):
-            name = clean_item_name(raw_name, language, output_lang)
-            if name:
-                return [_make_item(name, float(m.group(1)), "piece", 0.0, price_mode)]
+    if raw_name:
+        name = clean_item_name(raw_name, language, output_lang)
+        if not name:
+            name = raw_name.title() if raw_name.isascii() else raw_name
+    else:
+        name = "Item"
 
-    # 11. Pattern: Bare Name Price (e.g. "साखर 60", "मैदा 50")
-    m = re.search(
-        r"^([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)\s+(\d+(?:\.\d+)?)$",
-        s,
-        re.IGNORECASE
-    )
-    if m:
-        raw_name = m.group(1).strip()
-        price_val = float(m.group(2))
-        if not re.match(r"^(" + UNIT_RE + r"|" + CURR_RE + r")$", raw_name, re.IGNORECASE) and 1 <= price_val <= 15000:
-            name = clean_item_name(raw_name, language, output_lang)
-            if name:
-                return [_make_item(name, 1.0, "piece", price_val, price_mode)]
-
-    return []
+    return [_make_item(name, qty, unit, price, price_mode)]
 
 
 def merge_orphan_clauses(clauses: List[str]) -> List[str]:
@@ -264,28 +202,44 @@ def merge_orphan_clauses(clauses: List[str]) -> List[str]:
     i = 0
     while i < len(clauses):
         c = clauses[i].strip()
-        has_qty_or_unit = bool(re.search(rf"\b\d+\b|{UNIT_RE}", c, re.IGNORECASE))
-        has_price = bool(re.search(rf"{CURR_RE}", c, re.IGNORECASE))
-
-        # If clause is just an item name (no numbers, no unit, no price), merge with next if available
-        if not has_qty_or_unit and not has_price and i + 1 < len(clauses):
-            c = c + " " + clauses[i + 1].strip()
-            i += 1
-            # Check if next is also an orphan price piece (e.g. '80 rs')
-            if i + 1 < len(clauses):
-                next_c = clauses[i + 1].strip()
-                if not re.search(rf"{UNIT_RE}", next_c, re.IGNORECASE) and re.search(rf"\d|{CURR_RE}", next_c, re.IGNORECASE):
-                    c = c + " " + next_c
-                    i += 1
-        # If clause has qty+unit but next clause is just bare price (e.g. '1 kg' and '80 rs')
-        elif i + 1 < len(clauses):
+        while i + 1 < len(clauses):
             next_c = clauses[i + 1].strip()
-            if re.match(rf"^\d+(?:\.\d+)?\s*(?:{CURR_RE})?$", next_c, re.IGNORECASE):
+            # If next clause is just a currency symbol/word (e.g. 'rs', 'रुपये')
+            if re.match(rf"^({CURR_RE})$", next_c, re.IGNORECASE):
                 c = c + " " + next_c
                 i += 1
-            elif not re.search(rf"\b\d+\b|{UNIT_RE}|{CURR_RE}", next_c, re.IGNORECASE):
+                continue
+            # If current clause has no qty and no price, it's just a name or filler: merge next
+            has_qty_or_unit = bool(re.search(rf"\b\d+\b|{UNIT_RE}", c, re.IGNORECASE))
+            has_price = bool(re.search(rf"{CURR_RE}", c, re.IGNORECASE))
+            if not has_qty_or_unit and not has_price:
                 c = c + " " + next_c
                 i += 1
+                continue
+            # If current has qty/unit, but next is just a number or price (e.g. '80' or '80 rs')
+            if has_qty_or_unit and not has_price and re.match(rf"^\d+(?:\.\d+)?\s*(?:{CURR_RE})?$", next_c, re.IGNORECASE):
+                c = c + " " + next_c
+                i += 1
+                continue
+            # If current has price but NO qty/unit, and next has qty/unit but NO price (e.g. 'sakhar 60 rs' + '1 kg')
+            c_without_price = re.sub(rf"(\d+(?:\.\d+)?)\s*(?:,\s*)?{CURR_RE}", "", c, flags=re.IGNORECASE)
+            c_has_qty = bool(re.search(rf"\b\d+\b|{UNIT_RE}", c_without_price, re.IGNORECASE))
+            next_without_price = re.sub(rf"(\d+(?:\.\d+)?)\s*(?:,\s*)?{CURR_RE}", "", next_c, flags=re.IGNORECASE)
+            next_has_qty = bool(re.search(rf"\b\d+\b|{UNIT_RE}", next_without_price, re.IGNORECASE))
+            next_has_price = bool(re.search(rf"{CURR_RE}", next_c, re.IGNORECASE))
+            if has_price and not c_has_qty and next_has_qty and not next_has_price:
+                c = c + " " + next_c
+                i += 1
+                continue
+            # If current has qty and price, but NO name (e.g. '2 kg 50 rs' + 'xyz')
+            c_without_qty = re.sub(rf"(\d+(?:\.\d+)?)\s*(?:,\s*)?({UNIT_RE})\b", "", c_without_price, flags=re.IGNORECASE)
+            c_has_name = bool(re.search(r"[a-zA-Z\u0900-\u097F]", c_without_qty))
+            next_has_name = bool(re.search(r"[a-zA-Z\u0900-\u097F]", next_without_price))
+            if not c_has_name and next_has_name and not next_has_qty and not next_has_price:
+                c = c + " " + next_c
+                i += 1
+                continue
+            break
         merged.append(c)
         i += 1
     return merged

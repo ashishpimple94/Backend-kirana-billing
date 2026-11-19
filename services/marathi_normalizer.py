@@ -567,9 +567,11 @@ def canonicalize_marathi_item_name(name: str, language: str = "mr-IN", output_la
             return _format_entry(entry)
 
     # 3. Built-in Python difflib fuzzy match (catches typos like 'dtergent' -> 'detergent')
-    close_matches = difflib.get_close_matches(clean, ALL_CATALOG_TERMS, n=1, cutoff=0.72)
+    close_matches = difflib.get_close_matches(clean, ALL_CATALOG_TERMS, n=1, cutoff=0.78)
     if close_matches:
-        return _format_entry(CATALOG_TERMS_INDEX[close_matches[0]])
+        candidate = close_matches[0]
+        if abs(len(clean) - len(candidate)) <= 2:
+            return _format_entry(CATALOG_TERMS_INDEX[candidate])
 
     if is_devanagari:
         stripped_dev = re.sub(r"(?:ची|चे|चा|च्या|ला|मध्ये|वाले|वाली|वाला)$", "", deduped, flags=re.IGNORECASE).strip()
