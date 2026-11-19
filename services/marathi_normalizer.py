@@ -212,6 +212,22 @@ HUNDREDS_MAP = {
     "साडेचारशे": 450, "चारशे पन्नास": 450, "four fifty": 450,
     "दीडशे": 150, "एक सौ पचास": 150, "one fifty": 150, "deedshe": 150, "सव्वाशे": 125,
 
+    # Spaced Hundreds
+    "एक शे": 100, "ek she": 100, "ek shey": 100,
+    "दोन शे": 200, "don she": 200, "don shey": 200, "दो सौ": 200,
+    "तीन शे": 300, "teen she": 300, "teen shey": 300, "तीन सौ": 300,
+    "चार शे": 400, "char she": 400, "chaar she": 400, "चार सौ": 400,
+    "पाच शे": 500, "pach she": 500, "paach she": 500, "पाँच सौ": 500,
+    "सहा शे": 600, "saha she": 600, "छह सौ": 600,
+    "सात शे": 700, "sat she": 700, "saat she": 700, "सात सौ": 700,
+    "आठ शे": 800, "aath she": 800, "ath she": 800, "आठ सौ": 800,
+    "नऊ शे": 900, "nau she": 900, "nav she": 900, "नौ सौ": 900,
+    "दीड शे": 150, "deed she": 150, "did she": 150, "dedh sau": 150, "dedh so": 150,
+    "अडीच शे": 250, "adeech she": 250, "dhai sau": 250,
+    "साडेतीन शे": 350, "sade teen she": 350,
+    "साडेचार शे": 450, "sade char she": 450,
+    "साडेपाच शे": 550, "sade pach she": 550,
+
     # Marathi, Hindi & English Hundreds
     "एकशे": 100, "ekshe": 100, "ekshey": 100, "एकसे": 100, "ekse": 100, "एक सौ": 100, "one hundred": 100, "शंभर": 100, "shambhar": 100,
     "दोनशे": 200, "donshe": 200, "donshey": 200, "दोनसे": 200, "दो सौ": 200, "two hundred": 200,
@@ -528,15 +544,65 @@ def canonicalize_marathi_item_name(name: str, language: str = "mr-IN", output_la
     return clean.title()
 
 
+CURR_RE_STR = r"(?:rs|rupaye|rupay|rupees|rupee|inr|रुपये|रुपया|रू|₹|\/-)"
+
+
+def collapse_unit_echoes(s: str) -> str:
+    """Collapses bilingual and repeated unit echoes: e.g. '1kg 1kilo' -> '1 kg', '2kg 2kilo' -> '2 kg'."""
+    s = re.sub(
+        r"(\d+(?:\.\d+)?)\s*(?:kg|kilo|किलो|किग्रा|केजी)\s*(?:/|\s+)?(?:\1\s*)?(?:kg|kilo|किलो|किग्रा|केजी)",
+        r"\1 kg",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"(\d+(?:\.\d+)?)\s*(?:gm|gram|g|ग्रॅम|ग्राम)\s*(?:/|\s+)?(?:\1\s*)?(?:gm|gram|g|ग्रॅम|ग्राम)",
+        r"\1 gm",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"(\d+(?:\.\d+)?)\s*(?:litre|liter|ltr|l|लिटर|लीटर)\s*(?:/|\s+)?(?:\1\s*)?(?:litre|liter|ltr|l|लिटर|लीटर)",
+        r"\1 litre",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"(\d+(?:\.\d+)?)\s*(?:packet|pkt|पाकीट|पुडा|पॅकेट)\s*(?:/|\s+)?(?:\1\s*)?(?:packet|pkt|पाकीट|पुडा|पॅकेट)",
+        r"\1 packet",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"(\d+(?:\.\d+)?)\s*(?:box|खोके|बॉक्स)\s*(?:/|\s+)?(?:\1\s*)?(?:box|खोके|बॉक्स)",
+        r"\1 box",
+        s,
+        flags=re.IGNORECASE,
+    )
+    return s
+
+
+def collapse_price_echoes(s: str) -> str:
+    """Collapses bilingual and repeated price echoes: e.g. '50rs 50 rs' -> '50 rs', '120 120 rs' -> '120 rs'."""
+    s = re.sub(
+        rf"(?<!\d)(\d+(?:\.\d+)?)(?!\d)(?:\s*{CURR_RE_STR})?(?:\s+|\s*{CURR_RE_STR}\s*)(?<!\d)\1(?!\d)(?:\s*{CURR_RE_STR})?",
+        r" \1 rs ",
+        s,
+        flags=re.IGNORECASE,
+    )
+    return s
+
+
 def normalize_marathi_transcript(text: str) -> str:
     """
     Complete Marathi transcript normalization before Regex or LLM processing:
     1. Converts misidentified Indic scripts & Devanagari numerals.
-    2. Deduplicates speech repetitions.
+    2. Deduplicates speech repetitions and collapses unit echoes (1kg 1kilo -> 1 kg).
     3. Un-glues spoken numeral + unit words (एककिलो -> 1 kg, पावकिलो -> 250 gm).
     4. Normalizes units slashes (1kg/kilo -> 1 kg).
     5. Converts spoken number words to digits (साठ -> 60, पन्नास -> 50).
-    6. Strips 100,000 hallucinations.
+    6. Collapses repeated price echoes (50rs 50 rs -> 50 rs).
+    7. Strips 100,000 hallucinations.
     """
     if not text or not isinstance(text, str):
         return ""
@@ -544,6 +610,9 @@ def normalize_marathi_transcript(text: str) -> str:
     # 0. Convert Indic script & digits
     s = convert_indic_script_to_devanagari(text)
     s = s.translate(DEV_TO_ASCII)
+
+    # 0a. Collapse unit echoes first: "1kg 1kilo" -> "1 kg", "2kg 2kilo" -> "2 kg"
+    s = collapse_unit_echoes(s)
 
     # 0b. Preserve clause boundaries (commas, semicolons, pipes, danda) as spaced commas ' , '
     # Clean sentence-ending exclamation marks, question marks, and standalone periods
@@ -554,6 +623,7 @@ def normalize_marathi_transcript(text: str) -> str:
     s = deduplicate_spoken_tokens(s)
 
     # 2. Un-glue numeral + unit compounds and fractional weights (with and without space)
+    s = re.sub(r"(?:^|\s)(?:deedshe|deed\s*she|didshe|did\s*she|दीडशे|दीड\s*शे|dedh\s*sau|dedh\s*so)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 150 ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:pavkilo|pavkilu|पावकिलो|पाव\s*किलो|पावशेर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 250 gm ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:ardhakilo|ardhakilu|अर्धाकिलो|अर्धा\s*किलो|आधा\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 gm ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:paunkilo|paunkilu|पाऊणकिलो|पाऊण\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 750 gm ", s, flags=re.IGNORECASE)
@@ -610,7 +680,10 @@ def normalize_marathi_transcript(text: str) -> str:
     # 7. Standardize price markers
     s = PRECOMPILED_PRICE_REGEX.sub(" rs ", s)
 
-    # 7b. Collapse duplicate adjacent numbers spoken for emphasis (e.g. "60 60" -> "60", "550 550" -> "550")
+    # 7b. Collapse price echoes (e.g. "50 rs 50 rs" -> "50 rs", "60 60 rs" -> "60 rs", "120 120 rs" -> "120 rs")
+    s = collapse_price_echoes(s)
+
+    # 7c. Collapse duplicate adjacent numbers spoken for emphasis (e.g. "60 60" -> "60", "550 550" -> "550")
     s = re.sub(r"\b(\d+(?:\.\d+)?)\s+\1\b", r"\1", s)
 
     # 8. Guard: Remove 100,000 hallucinations
@@ -619,6 +692,9 @@ def normalize_marathi_transcript(text: str) -> str:
 
     # Convert MRP markers (e.g. 10/-)
     s = re.sub(r"(\d+)\s*/\s*-?", r"\1/-", s)
+
+    # Second pass for unit echoes
+    s = collapse_unit_echoes(s)
 
     # Clean multiple spaces
     s = re.sub(r"\s+", " ", s).strip()

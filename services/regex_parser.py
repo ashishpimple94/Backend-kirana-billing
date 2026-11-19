@@ -83,7 +83,7 @@ def _make_item(name, qty, unit, price, price_mode="per_unit"):
     if price_mode == "line_total":
         amount = price
         unit_price = round(price / max(qty, 0.001), 2)
-    elif unit == "gm" and qty >= 20 and price > 0:
+    elif unit in ("gm", "ml") and qty >= 20 and price > 0:
         amount = price
         unit_price = round((price / qty) * 1000, 2)
     else:
@@ -149,6 +149,17 @@ def parse_segment(seg: str, options: Optional[Dict[str, Any]] = None) -> List[Di
         qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
         name = clean_item_name(m.group(3), language, output_lang)
         return [_make_item(name or "Item", qty, unit, float(m.group(4)), price_mode)]
+
+    # 3b. Pattern: [Qty] [Unit] [Price] [Name] (e.g. "1 kg 60 rs sakhar")
+    m = re.search(
+        r"^(\d+(?:\.\d+)?)\s*(" + UNIT_RE + r")\s+(\d+(?:\.\d+)?)" + NO_UNIT_LOOKAHEAD + r"(?:\s*" + CURR_RE + r")?\s+([a-zA-Z\u0900-\u097F][\w\u0900-\u097F\s-]{1,35}?)$",
+        s,
+        re.IGNORECASE
+    )
+    if m:
+        qty, unit = clean_unit_and_qty(m.group(1), m.group(2))
+        name = clean_item_name(m.group(4), language, output_lang)
+        return [_make_item(name or "Item", qty, unit, float(m.group(3)), price_mode)]
 
     # 4. Pattern E: [Qty] [Name] [Unit] [Price] (e.g. "2 पार्ले box 120 rs")
     m = re.search(
@@ -270,6 +281,9 @@ def merge_orphan_clauses(clauses: List[str]) -> List[str]:
         elif i + 1 < len(clauses):
             next_c = clauses[i + 1].strip()
             if re.match(rf"^\d+(?:\.\d+)?\s*(?:{CURR_RE})?$", next_c, re.IGNORECASE):
+                c = c + " " + next_c
+                i += 1
+            elif not re.search(rf"\b\d+\b|{UNIT_RE}|{CURR_RE}", next_c, re.IGNORECASE):
                 c = c + " " + next_c
                 i += 1
         merged.append(c)
