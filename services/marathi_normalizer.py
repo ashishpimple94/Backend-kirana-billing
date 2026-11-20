@@ -344,7 +344,27 @@ PRECOMPILED_MERGE_THOUSANDS_REGEX = re.compile(
     re.IGNORECASE,
 )
 PRECOMPILED_FILLER_REGEX = make_unicode_regex("आणि|तसेच|त्यानंतर|त्याच्यानंतर|बरं|पुढे|द्या|घ्या|पाहिजे|लाव|टाक|आणखी|आण")
-PRECOMPILED_PRICE_REGEX = make_unicode_regex(r"रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपया|रु\.|रु|रूपय|रूपये|रू|rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|/-")
+PRECOMPILED_PRICE_REGEX = make_unicode_regex(
+    r"रुपये|रुपयांची|रुपयांचे|रुपयांचा|रुपयाने|रुपयाला|रुपयाची|रुपयाचे|रुपयाचा|रुपया|रु\.|रु|रूपय|रूपये|रू|"
+    r"भावाने|भावाची|भावाचा|भावाचे|भाव|दराने|दराचा|दराची|दराचे|दर|प्रति|प्रती|"
+    r"rs|rupees|rupee|rupaye|rupay|ruapaye|rupiya|rupiye|rupe|inr|₹|\/-"
+)
+
+UNICODE_END_PATTERN = r"(?=[^\u0900-\u097Fa-zA-Z0-9]|$)"
+
+def clean_rate_per_unit_clause(clause: str) -> str:
+    """Handles per-unit rate clauses: e.g. '60 rs kg' -> '1 kg 60 rs', '2 kg 60 rs kg' -> '2 kg 60 rs'."""
+    rate_unit_m = re.search(rf"(?<!\d)(\d+(?:\.\d+)?)\s*rs\s*(kg|litre|packet|box|piece|gm|dozen){UNICODE_END_PATTERN}", clause, flags=re.IGNORECASE)
+    if rate_unit_m:
+        rate_val = rate_unit_m.group(1)
+        rate_unit = rate_unit_m.group(2)
+        clause_without_rate_unit = clause[:rate_unit_m.start()] + " " + clause[rate_unit_m.end():]
+        has_other_qty = bool(re.search(rf"(?<!\d)(\d+(?:\.\d+)?)\s*(?:kg|litre|packet|box|piece|gm|dozen){UNICODE_END_PATTERN}", clause_without_rate_unit, flags=re.IGNORECASE))
+        if has_other_qty:
+            clause = clause[:rate_unit_m.start()] + f" {rate_val} rs " + clause[rate_unit_m.end():]
+        else:
+            clause = clause[:rate_unit_m.start()] + f" 1 {rate_unit} {rate_val} rs " + clause[rate_unit_m.end():]
+    return clause
 
 
 def parse_marathi_spoken_numbers(text: str) -> str:
@@ -804,6 +824,14 @@ def normalize_marathi_transcript(text: str) -> str:
     s = convert_indic_script_to_devanagari(text)
     s = s.translate(DEV_TO_ASCII)
 
+    # 0a0. Generic un-glue attached digit + unit (e.g. 1kilo -> 1 kg, 50rs -> 50 rs, 2litre -> 2 litre)
+    s = re.sub(
+        rf"(?<!\d)(\d+(?:\.\d+)?)\s*(kilo|kilu|kg|kgs|किग्रा|किलो|किलू|किलु|gm|gms|gram|grams|ग्रॅम|ग्राम|litre|liter|ltr|l|लिटर|लीटर|packet|pkt|पाकीट|पुडा|पॅकेट|box|खोके|खोका|बॉक्स|nag|नग|pcs|piece|dozen|डझन|दर्जन|tola|तोळा|तोला|rs|रू|रुपये|रुपया){UNICODE_END_PATTERN}",
+        r"\1 \2",
+        s,
+        flags=re.IGNORECASE,
+    )
+
     # 0a. Collapse unit echoes first: "1kg 1kilo" -> "1 kg", "2kg 2kilo" -> "2 kg"
     s = collapse_unit_echoes(s)
 
@@ -866,7 +894,21 @@ def normalize_marathi_transcript(text: str) -> str:
     # 5. Spoken numbers to digits (1 to 5000)
     s = parse_marathi_spoken_numbers(s)
 
-    # 6. Standardize units
+    # 6a. Rate postpositions with Unicode boundary (e.g. "६० रुपये किलोने", "६० भावाने", "६० दराने", "६० रुपये किलोला")
+    s = re.sub(
+        rf"(?<!\d)(\d+(?:\.\d+)?)\s*(?:rs|rupaye|rupees|rupee|रुपये|रुपया|रू|₹)?\s*(?:per|\/|प्रति|प्रती)?\s*(?:किलोने|किलोला|लिटरने|लिटरला|डझनाने|डझनाला|नगाने|नगाला|पाकिटाने|पाकिटाला|पुड्याने){UNICODE_END_PATTERN}",
+        r" \1 rs ",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        rf"(?<!\d)(\d+(?:\.\d+)?)\s*(?:rs|rupaye|rupees|rupee|रुपये|रुपया|रू|₹)?\s*(?:per|\/|प्रति|प्रती)?\s*(?:भावाने|भावाची|भावाचा|भावाचे|भाव|दराने|दराचा|दराची|दराचे|दर|रुपयाने|रुपयाला|रुपयाची|रुपयाचे|रुपयांचा|रुपयांची){UNICODE_END_PATTERN}",
+        r" \1 rs ",
+        s,
+        flags=re.IGNORECASE,
+    )
+
+    # 6b. Standardize units
     for pattern, canonical in MARATHI_UNITS:
         s = pattern.sub(f" {canonical} ", s)
 
@@ -878,6 +920,10 @@ def normalize_marathi_transcript(text: str) -> str:
 
     # 7c. Collapse duplicate adjacent numbers spoken for emphasis (e.g. "60 60" -> "60", "550 550" -> "550")
     s = re.sub(r"\b(\d+(?:\.\d+)?)\s+\1\b", r"\1", s)
+
+    # 7d. Clean rate per unit in clauses (e.g. "साखर 60 rs kg" -> "साखर 1 kg 60 rs", "2 kg साखर 60 rs kg" -> "2 kg साखर 60 rs")
+    clauses = [clean_rate_per_unit_clause(c) for c in s.split(" , ")]
+    s = " , ".join(clauses)
 
     # 8. Guard: Remove 100,000 hallucinations
     s = re.sub(r"\b100000\b", "", s)

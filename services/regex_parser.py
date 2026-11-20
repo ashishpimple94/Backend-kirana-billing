@@ -46,7 +46,10 @@ UNIT_RE = (
     r"|किलो|केजी|ग्रॅम|ग्राम|लिटर|लीटर|मिली|पाकीट|पुडा|खोके|बॉक्स|नग|बाटली|डझन"
 )
 
-CURR_RE = r"(?:rs|rupaye|rupay|rupees|rupee|inr|रुपये|रुपया|रू|₹|\/-)"
+CURR_RE = (
+    r"(?:rs|rupaye|rupay|rupees|rupee|inr|रुपये|रुपया|रुपयाने|रुपयाला|रुपयाची|रुपयाचे|रुपयांचा|रुपयांची|"
+    r"भावाने|भावाची|भावाचा|भावाचे|भाव|दराने|दराचा|दराची|दराचे|दर|रू|₹|\/-)"
+)
 NO_UNIT_LOOKAHEAD = rf"(?!\s*(?:{UNIT_RE}))"
 
 PRICE_SUFFIX = re.compile(rf"\s*{CURR_RE}\s*$", re.IGNORECASE)
@@ -101,6 +104,7 @@ def _make_item(name, qty, unit, price, price_mode="per_unit"):
 
 FILLER_WORDS = set([
     "टाका", "द्या", "पाहिजे", "घ्या", "करा", "आणखी", "आहे", "नाही", "दे", "दो", "लाओ",
+    "भावाने", "दराने", "दर", "भाव", "dar", "darr", "rate", "bhav", "bhaw",
     "baba", "dya", "taka", "de", "do", "bolo", "chala", "please", "bhai", "ani", "and", "aur", "va", "next", "then"
 ])
 
@@ -191,6 +195,8 @@ def parse_segment(seg: str, options: Optional[Dict[str, Any]] = None) -> List[Di
         if not name:
             name = raw_name.title() if raw_name.isascii() else raw_name
     else:
+        if not has_explicit_qty and price <= 0:
+            return []
         name = "Item"
 
     return [_make_item(name, qty, unit, price, price_mode)]
@@ -257,8 +263,14 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
     # Convert multi-item connectors into commas: "आणि", "तसेच", "व", "त्यानंतर", "and", "aur"
     norm_split = re.sub(r"\s+(?:आणि|तसेच|व|त्यानंतर|त्याच्यानंतर|and|aur|next|then)\s+", " , ", norm, flags=re.IGNORECASE)
 
-    # Insert comma after currency word if followed by another word/number (for continuous stream)
-    norm_split = re.sub(rf"({CURR_RE})\s+(?=[a-zA-Z\u0900-\u097F\d])", r"\1 , ", norm_split, flags=re.IGNORECASE)
+    # Insert comma after currency word if followed by another word/number (for continuous stream),
+    # but NEVER if followed by a rate denominator unit or postposition (e.g. 60 rs / kg, 60 rs किलोने, 60 rs darr)
+    norm_split = re.sub(
+        rf"({CURR_RE})\s+(?!(?:per|\/|प्रति|प्रती|किलो|kilo|kg|लिटर|litre|liter|डझन|dozen|नग|pcs|पाकीट|packet|पुडा|gm|ग्रॅम|भावाने|दराने|ने|ला|dar|darr|rate|bhav|bhaw|दर|भाव)\b)(?=[a-zA-Z\u0900-\u097F\d])",
+        r"\1 , ",
+        norm_split,
+        flags=re.IGNORECASE,
+    )
 
     # Split into raw segments
     raw_segments = [seg.strip() for seg in re.split(r"[,;\n+|]+", norm_split) if seg.strip()]
