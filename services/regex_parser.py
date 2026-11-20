@@ -272,6 +272,14 @@ def parse_bill_with_regex(transcript: str, options: Optional[Dict[str, Any]] = N
         flags=re.IGNORECASE,
     )
 
+    # Insert comma between a rate number and the start of a next Kirana item keyword (e.g. "100 तेल", "60 रवा", "50 साखर", "150 साबण")
+    norm_split = re.sub(
+        r"(\b\d{1,5})\s+(?=(?:तेल|गोडेतेल|साखर|रवा|गहू|तांदूळ|शेंगदाणे|पोहे|तूर|मूग|उडद|हरभरा|मसूर|साबण|डिटर्जंट|सर्फ|टायड|व्हील|घडी|लक्स|संतूर|लाईफबॉय|डेटॉल|विम|कोलगेट|पारले|चहा|दूध|तूप|गूळ|मीठ|हळद|जिरे|मोहरी|धने|हिंग|मसाला|मैदा|आटा|पीठ|सुजी|बेसन|शारदा|चांदतारा|बासमती|कोलम|इंद्रायणी|फॉर्च्यून|जेमिनी|sakhar|sugar|rawa|rava|oil|tel|gahu|tandul|rice|pohe|poha|soap|saban|surf|tide|wheel|colgate|parle|tea|chai|dudh|milk|ghee|toop|atta|besan)\b)",
+        r"\1 , ",
+        norm_split,
+        flags=re.IGNORECASE,
+    )
+
     # Split into raw segments
     raw_segments = [seg.strip() for seg in re.split(r"[,;\n+|]+", norm_split) if seg.strip()]
 

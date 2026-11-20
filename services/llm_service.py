@@ -53,7 +53,8 @@ CRITICAL RULES:
 
 3. MARATHI NUMBERS, HUNDREDS & COMPOUNDS (CRITICAL):
 - Single numbers: एक=1, दोन=2, तीन=3, चार=4, पाच=5, सहा=6, सात=7, आठ=8, नऊ=9, दहा=10, अकरा=11, बारा=12, तेरा=13, चौदा=14, पंधरा=15, सोळा=16, सतरा=17, अठरा=18, एकोणीस=19, वीस=20, पंचवीस=25, तीस=30, पस्तीस=35, चाळीस=40, पन्नास=50, साठ=60, सत्तर=70, ऐंशी=80, नव्वद=90.
-- Hundreds: शंभर/एकशे/एकसे=100, दोनशे/दोनसे=200, तीनशे/तीनसे=300, चारशे/चारसे=400, पाचशे/पाचसे=500, सहाशे/सहासे=600, सातशे/सातसे=700, आठशे/आठसे=800, नऊशे/नऊसे/नवशे=900, एक हजार=1000.
+- Hundreds & Fractions: शंभर/एकशे/एकसे/shambhar=100, दीडशे/didhshe/deedshe=150, सव्वाशे/savvashe=125, दोनशे/donshe=200, अडीचशे/adeechshe/dhai sau=250, तीनशे/teenshe=300, साडेतीनशे/sadeteenshe=350, चारशे/charshe=400, साडेचारशे/sadecharshe=450, पाचशे/pachshe=500, साडेपाचशे/sadepachshe=550, सहाशे/sahashe=600, सातशे/satshe=700, आठशे/aathshe=800, नऊशे/naushe=900, एक हजार=1000.
+- Bilingual Number Echoes (MANDATORY): "100 shambhar" = 100, "shambhar 100" = 100, "didhshe 150" / "150 didhshe" = 150, "50 pannas" = 50, "60 saath" = 60, "250 adeechshe" = 250, "80 aainshi" = 80. Extract the single numeric rate (e.g. 100, 150, 50, 60), NEVER mistake the Marathi word for a product name!
 - Thousands (Scalable Compound Numbers 1 to 5000):
   - "पाच हजार" / "pach hajar" / "panch hazar" / "5 hajar" / "five thousand" = 5000
   - "दोन हजार पाचशे" / "अडीच हजार" / "two thousand five hundred" = 2500
@@ -595,6 +596,189 @@ class OpenAIProvider:
             }
 
 
+class SarvamProvider:
+    """Direct HTTP client for Sarvam AI Saaras STT engine (mr-IN)."""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("SARVAM_API_KEY", "")
+        self.stt_url = "https://api.sarvam.ai/speech-to-text"
+
+    async def parse_audio(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/mp4",
+        language: str = "mr-IN",
+        price_mode: str = "per_unit",
+        output_lang: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            raise Exception("SARVAM_API_KEY is not set in environment variables")
+
+        lang_code = "mr-IN"
+        if language and "hi" in language.lower():
+            lang_code = "hi-IN"
+        elif language and "en" in language.lower():
+            lang_code = "en-IN"
+
+        files = {
+            "file": ("audio.m4a", audio_bytes, mime_type),
+        }
+        data = {
+            "model": "saaras:v4",
+            "language_code": lang_code,
+            "mode": "codemix",
+            "with_diacritics": "false",
+        }
+        headers = {
+            "api-subscription-key": self.api_key,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.post(self.stt_url, headers=headers, files=files, data=data)
+            if res.status_code != 200:
+                # Fallback to saaras:v3 if v4 unavailable
+                data["model"] = "saaras:v3"
+                res = await client.post(self.stt_url, headers=headers, files=files, data=data)
+                if res.status_code != 200:
+                    raise Exception(f"Sarvam AI error ({res.status_code}): {res.text}")
+
+            result = res.json()
+            raw_transcript = (result.get("transcript") or "").strip()
+            if not raw_transcript:
+                return {"transcript": "", "items": [], "provider": "sarvam"}
+
+            # Fast-path regex parser with Marathi normalizer
+            normalized = normalize_voice_transcript(raw_transcript)
+            out_l = output_lang or "mr"
+            regex_items = parse_bill_with_regex(normalized, {"priceMode": price_mode, "language": language, "outputLang": out_l})
+            if regex_items and len(regex_items) > 0:
+                print(f"[Sarvam Fast-Path HIT] Extracted {len(regex_items)} items from: \"{raw_transcript}\"")
+                return {
+                    "transcript": raw_transcript,
+                    "items": sanitize_items(regex_items, price_mode, language, out_l),
+                    "provider": "sarvam-saaras",
+                    "model": "saaras:v4 + fastpath",
+                }
+
+            # If fastpath did not get everything, use downstream LLM
+            llm_prov = get_llm_provider("anthropic" if os.getenv("ANTHROPIC_API_KEY") else ("groq" if os.getenv("GROQ_API_KEY") else "gemini"))
+            llm_res = await llm_prov.parse_transcript(normalized, language, price_mode, out_l)
+            llm_res["transcript"] = raw_transcript
+            llm_res["provider"] = f"sarvam + {llm_res.get('provider', 'llm')}"
+            return llm_res
+
+    async def parse_transcript(
+        self,
+        transcript: str,
+        language: str = "mr-IN",
+        price_mode: str = "per_unit",
+        output_lang: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        out_l = output_lang or "mr"
+        normalized = normalize_voice_transcript(transcript)
+        regex_items = parse_bill_with_regex(normalized, {"priceMode": price_mode, "language": language, "outputLang": out_l})
+        if regex_items and len(regex_items) > 0:
+            return {
+                "transcript": transcript,
+                "items": sanitize_items(regex_items, price_mode, language, out_l),
+                "provider": "sarvam-fastpath",
+                "model": "fastpath",
+            }
+        llm_prov = get_llm_provider("anthropic" if os.getenv("ANTHROPIC_API_KEY") else ("groq" if os.getenv("GROQ_API_KEY") else "gemini"))
+        return await llm_prov.parse_transcript(normalized, language, price_mode, out_l)
+
+
+class AnthropicProvider:
+    """Direct HTTP client for Anthropic Claude (Claude 3.5 Haiku / Sonnet)."""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
+        self.messages_url = "https://api.anthropic.com/v1/messages"
+
+    async def parse_audio(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/mp4",
+        language: str = "mr-IN",
+        price_mode: str = "per_unit",
+        output_lang: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        # Claude is text-only; transcribe first using Sarvam/Groq/Gemini
+        stt = None
+        if os.getenv("SARVAM_API_KEY"):
+            stt = SarvamProvider()
+        elif os.getenv("GROQ_API_KEY"):
+            stt = GroqProvider()
+        else:
+            stt = GeminiProvider()
+        stt_res = await stt.parse_audio(audio_bytes, mime_type, language, price_mode, output_lang)
+        transcript = stt_res.get("transcript", "")
+        if not transcript:
+            return {"transcript": "", "items": [], "provider": "anthropic"}
+        claude_res = await self.parse_transcript(transcript, language, price_mode, output_lang)
+        claude_res["transcript"] = transcript
+        return claude_res
+
+    async def parse_transcript(
+        self,
+        transcript: str,
+        language: str = "mr-IN",
+        price_mode: str = "per_unit",
+        output_lang: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            raise Exception("ANTHROPIC_API_KEY is not set")
+
+        out_l = output_lang or "mr"
+        normalized = normalize_voice_transcript(transcript)
+        regex_items = parse_bill_with_regex(normalized, {"priceMode": price_mode, "language": language, "outputLang": out_l})
+        if regex_items and len(regex_items) > 0:
+            return {
+                "transcript": transcript,
+                "items": sanitize_items(regex_items, price_mode, language, out_l),
+                "provider": "anthropic-fastpath",
+                "model": "fastpath",
+            }
+
+        headers = {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+        payload = {
+            "model": "claude-3-5-haiku-20241022",
+            "max_tokens": 1500,
+            "temperature": 0.0,
+            "system": SYSTEM_PROMPT,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Language: {language}. Output Language: {out_l}. Parse this Kirana transcript into JSON items: \"{normalized}\"",
+                }
+            ],
+        }
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            res = await client.post(self.messages_url, headers=headers, json=payload)
+            if res.status_code != 200:
+                raise Exception(f"Anthropic error ({res.status_code}): {res.text}")
+
+            data = res.json()
+            content = data.get("content", [{}])[0].get("text", "{}").strip()
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
+
+            parsed = json.loads(content)
+            raw_list = parsed.get("items") or (parsed if isinstance(parsed, list) else [])
+            items = sanitize_items(raw_list, price_mode, language, out_l)
+            return {
+                "transcript": transcript,
+                "items": items,
+                "provider": "anthropic",
+                "model": "claude-3-5-haiku",
+            }
+
+
 async def gemini_transcribe(audio_bytes: bytes, mime_type: str = "audio/mp4", language: str = "mr-IN") -> str:
     """Gemini speech-to-text only (audio -> transcript text)."""
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
@@ -629,16 +813,24 @@ async def gemini_transcribe(audio_bytes: bytes, mime_type: str = "audio/mp4", la
 
 def get_llm_provider(provider_name: Optional[str] = None):
     """
-    Service Factory matching getLLMProvider in JavaScript:
-    Prioritizes Groq -> OpenAI -> Gemini.
+    Service Factory matching getLLMProvider:
+    Prioritizes Sarvam -> Anthropic -> Groq -> OpenAI -> Gemini.
     """
-    p = (provider_name or os.getenv("LLM_PROVIDER") or ("groq" if os.getenv("GROQ_API_KEY") else ("openai" if os.getenv("OPENAI_API_KEY") else "gemini"))).lower()
+    p = (provider_name or os.getenv("LLM_PROVIDER") or ("sarvam" if os.getenv("SARVAM_API_KEY") else ("anthropic" if os.getenv("ANTHROPIC_API_KEY") else ("groq" if os.getenv("GROQ_API_KEY") else ("openai" if os.getenv("OPENAI_API_KEY") else "gemini"))))).lower()
+    if p == "sarvam":
+        return SarvamProvider()
+    if p == "anthropic":
+        return AnthropicProvider()
     if p == "groq":
         return GroqProvider()
     if p == "openai":
         return OpenAIProvider()
     if p == "gemini":
         return GeminiProvider()
+    if os.getenv("SARVAM_API_KEY"):
+        return SarvamProvider()
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return AnthropicProvider()
     if os.getenv("GROQ_API_KEY"):
         return GroqProvider()
     return OpenAIProvider() if os.getenv("OPENAI_API_KEY") else GeminiProvider()

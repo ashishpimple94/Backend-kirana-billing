@@ -28,6 +28,8 @@ from services.marathi_normalizer import (
 )
 from services.regex_parser import parse_bill_with_regex
 from services.llm_service import (
+    SarvamProvider,
+    AnthropicProvider,
     GroqProvider,
     GeminiProvider,
     OpenAIProvider,
@@ -66,6 +68,8 @@ async def health_check():
         "service": "bilzy-kirana-fastapi",
         "database": {"status": db_status},
         "providers": {
+            "sarvam": bool(os.getenv("SARVAM_API_KEY")),
+            "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "gemini": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
             "groq": bool(os.getenv("GROQ_API_KEY")),
             "openai": bool(os.getenv("OPENAI_API_KEY")),
@@ -214,8 +218,10 @@ async def api_voice_to_bill(
             detail="Audio data is required. Please upload an audio file or base64 audio."
         )
 
-    # Provider cascade: Groq -> OpenAI -> Gemini
+    # Provider cascade: Sarvam (Native Marathi STT) -> Groq -> OpenAI -> Gemini
     providers = []
+    if os.getenv("SARVAM_API_KEY"):
+        providers.append(("sarvam", SarvamProvider()))
     if os.getenv("GROQ_API_KEY"):
         providers.append(("groq", GroqProvider()))
     if os.getenv("OPENAI_API_KEY"):

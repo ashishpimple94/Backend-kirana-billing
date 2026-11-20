@@ -208,10 +208,10 @@ HUNDREDS_MAP = {
 
     # 110, 250, 350, 450, 150, 125
     "एकशे दहा": 110, "one ten": 110, "ekshe daha": 110,
-    "अडीचशे": 250, "दोनशे पन्नास": 250, "two fifty": 250, "dhai sau": 250, "donshe pannas": 250,
-    "साडेतीनशे": 350, "तीनशे पन्नास": 350, "three fifty": 350,
-    "साडेचारशे": 450, "चारशे पन्नास": 450, "four fifty": 450,
-    "दीडशे": 150, "एक सौ पचास": 150, "one fifty": 150, "deedshe": 150, "सव्वाशे": 125,
+    "अडीचशे": 250, "दोनशे पन्नास": 250, "two fifty": 250, "dhai sau": 250, "donshe pannas": 250, "adeechshe": 250, "adeechshey": 250, "adichshe": 250, "adichshey": 250,
+    "साडेतीनशे": 350, "तीनशे पन्नास": 350, "three fifty": 350, "sadeteenshe": 350, "sadeteenshey": 350,
+    "साडेचारशे": 450, "चारशे पन्नास": 450, "four fifty": 450, "sadecharshe": 450, "sadecharshey": 450,
+    "दीडशे": 150, "एक सौ पचास": 150, "one fifty": 150, "deedshe": 150, "didhshe": 150, "didhse": 150, "didhshey": 150, "didshe": 150, "didshey": 150, "deedhshe": 150, "deedhse": 150, "dheedhshe": 150, "सव्वाशे": 125, "savvashe": 125, "savvashey": 125,
 
     # Spaced Hundreds
     "एक शे": 100, "ek she": 100, "ek shey": 100,
@@ -223,14 +223,14 @@ HUNDREDS_MAP = {
     "सात शे": 700, "sat she": 700, "saat she": 700, "सात सौ": 700,
     "आठ शे": 800, "aath she": 800, "ath she": 800, "आठ सौ": 800,
     "नऊ शे": 900, "nau she": 900, "nav she": 900, "नौ सौ": 900,
-    "दीड शे": 150, "deed she": 150, "did she": 150, "dedh sau": 150, "dedh so": 150,
+    "दीड शे": 150, "deed she": 150, "did she": 150, "didh she": 150, "didh se": 150, "didh shey": 150, "dedh sau": 150, "dedh so": 150,
     "अडीच शे": 250, "adeech she": 250, "dhai sau": 250,
     "साडेतीन शे": 350, "sade teen she": 350,
     "साडेचार शे": 450, "sade char she": 450,
     "साडेपाच शे": 550, "sade pach she": 550,
 
     # Marathi, Hindi & English Hundreds
-    "एकशे": 100, "ekshe": 100, "ekshey": 100, "एकसे": 100, "ekse": 100, "एक सौ": 100, "one hundred": 100, "शंभर": 100, "shambhar": 100,
+    "एकशे": 100, "ekshe": 100, "ekshey": 100, "एकसे": 100, "ekse": 100, "एक सौ": 100, "one hundred": 100, "शंभर": 100, "shambhar": 100, "shambar": 100, "shambhur": 100, "shambhr": 100, "शंबर": 100, "सम्भर": 100,
     "दोनशे": 200, "donshe": 200, "donshey": 200, "दोनसे": 200, "दो सौ": 200, "two hundred": 200,
     "तीनशे": 300, "teenshe": 300, "teenshey": 300, "तीनसे": 300, "teen sau": 300, "three hundred": 300,
     "चारशे": 400, "charshe": 400, "chaarshey": 400, "चारसे": 400, "char sau": 400, "four hundred": 400,
@@ -806,6 +806,21 @@ def collapse_price_echoes(s: str) -> str:
     return s
 
 
+def collapse_bilingual_echoes(s: str) -> str:
+    """Collapses bilingual and spoken number echoes: e.g. '100 shambhar' -> '100', 'didhshe 150' -> '150'."""
+    s = re.sub(r'\b(?:100\s*(?:shambhar|shambar|शंभर|शंबर)|(?:shambhar|shambar|शंभर|शंबर)\s*100)\b', ' 100 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:150\s*(?:didhshe|didhse|didshe|deedshe|deedhshe|deedhse|दीडशे)|(?:didhshe|didhse|didshe|deedshe|deedhshe|deedhse|दीडशे)\s*150)\b', ' 150 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:250\s*(?:adeechshe|adichshe|dhai\s*sau|अडीचशे)|(?:adeechshe|adichshe|dhai\s*sau|अडीचशे)\s*250)\b', ' 250 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:50\s*(?:pannas|pannaas|पन्नास|पन्नस)|(?:pannas|pannaas|पन्नास|पन्नस)\s*50)\b', ' 50 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:60\s*(?:saath|sath|साठ)|(?:saath|sath|साठ)\s*60)\b', ' 60 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:80\s*(?:aainshi|aishi|ऐंशी|ऐशी)|(?:aainshi|aishi|ऐंशी|ऐशी)\s*80)\b', ' 80 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:70\s*(?:sattar|satar|सत्तर)|(?:sattar|satar|सत्तर)\s*70)\b', ' 70 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:40\s*(?:chalis|chalees|चाळीस|चालीस)|(?:chalis|chalees|चाळीस|चालीस)\s*40)\b', ' 40 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:30\s*(?:tees|tis|तीस)|(?:tees|tis|तीस)\s*30)\b', ' 30 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(?:20\s*(?:vees|bees|वीस|बीस)|(?:vees|bees|वीस|बीस)\s*20)\b', ' 20 ', s, flags=re.IGNORECASE)
+    return s
+
+
 def normalize_marathi_transcript(text: str) -> str:
     """
     Complete Marathi transcript normalization before Regex or LLM processing:
@@ -834,6 +849,7 @@ def normalize_marathi_transcript(text: str) -> str:
 
     # 0a. Collapse unit echoes first: "1kg 1kilo" -> "1 kg", "2kg 2kilo" -> "2 kg"
     s = collapse_unit_echoes(s)
+    s = collapse_bilingual_echoes(s)
 
     # 0b. Preserve clause boundaries (commas, semicolons, pipes, danda) as spaced commas ' , '
     # Clean sentence-ending exclamation marks, question marks, and standalone periods
@@ -844,7 +860,7 @@ def normalize_marathi_transcript(text: str) -> str:
     s = deduplicate_spoken_tokens(s)
 
     # 2. Un-glue numeral + unit compounds and fractional weights (with and without space)
-    s = re.sub(r"(?:^|\s)(?:deedshe|deed\s*she|didshe|did\s*she|दीडशे|दीड\s*शे|dedh\s*sau|dedh\s*so)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 150 ", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?:^|\s)(?:didhshe|didhse|didh\s*she|didh\s*se|deedshe|deed\s*she|didshe|did\s*she|deedhshe|deedhse|दीडशे|दीड\s*शे|dedh\s*sau|dedh\s*so)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 150 ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:pavkilo|pavkilu|पावकिलो|पाव\s*किलो|पावशेर)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 250 gm ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:ardhakilo|ardhakilu|अर्धाकिलो|अर्धा\s*किलो|आधा\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 500 gm ", s, flags=re.IGNORECASE)
     s = re.sub(r"(?:^|\s)(?:paunkilo|paunkilu|पाऊणकिलो|पाऊण\s*किलो)(?=[^\u0900-\u097Fa-zA-Z]|$)", " 750 gm ", s, flags=re.IGNORECASE)
@@ -917,6 +933,7 @@ def normalize_marathi_transcript(text: str) -> str:
 
     # 7b. Collapse price echoes (e.g. "50 rs 50 rs" -> "50 rs", "60 60 rs" -> "60 rs", "120 120 rs" -> "120 rs")
     s = collapse_price_echoes(s)
+    s = collapse_bilingual_echoes(s)
 
     # 7c. Collapse duplicate adjacent numbers spoken for emphasis (e.g. "60 60" -> "60", "550 550" -> "550")
     s = re.sub(r"\b(\d+(?:\.\d+)?)\s+\1\b", r"\1", s)
